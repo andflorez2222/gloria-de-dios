@@ -733,6 +733,56 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
 .mt20{margin-top:20px;}
 .flex{display:flex;} .aic{align-items:center;} .g8{gap:8px;} .g12{gap:12px;}
 
+/* ===== BOTTOM NAV MOBILE ===== */
+.bottom-nav{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--ink);
+  z-index:200;
+  border-top:1px solid rgba(255,255,255,0.1);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.bnav-inner{
+  display:flex;justify-content:space-around;
+  padding:6px 0 4px;
+}
+.bnav-item{
+  display:flex;flex-direction:column;align-items:center;
+  gap:2px;padding:5px 8px;cursor:pointer;border-radius:8px;
+  color:rgba(255,255,255,0.4);font-size:9px;font-weight:700;
+  letter-spacing:.3px;text-transform:uppercase;min-width:50px;
+  border:none;background:none;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;
+}
+.bnav-item .bico{font-size:22px;line-height:1;}
+.bnav-item.active{color:var(--rose-soft);}
+
+/* More menu */
+.more-menu{
+  display:none;position:fixed;bottom:0;left:0;right:0;
+  background:var(--ink);z-index:190;
+  border-radius:20px 20px 0 0;
+  padding:20px 16px 80px;
+  box-shadow:0 -8px 32px rgba(0,0,0,0.4);
+}
+.more-menu.open{display:block;}
+.more-menu-title{
+  font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:rgba(255,255,255,0.3);padding:0 8px 12px;
+}
+.more-menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.mm-item{
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:14px 8px;border-radius:10px;
+  background:rgba(255,255,255,0.07);cursor:pointer;
+  color:rgba(255,255,255,0.75);font-size:11px;font-weight:600;text-align:center;
+  border:none;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;
+}
+.mm-item .mico{font-size:22px;}
+.mm-item.active,.mm-item:hover{background:var(--rose);color:white;}
+.more-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:185;}
+.more-overlay.open{display:block;}
+
+/* ===== TABLET ===== */
 @media(max-width:900px){
   .sidebar{width:58px;}
   .sb-logo h2,.sb-logo span,.sb-user,.nav-sec,.ni span,.logout-btn span{display:none;}
@@ -740,6 +790,115 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
   .stats-grid{grid-template-columns:1fr 1fr;}
   .login-left{width:100%;}
   .login-right{display:none;}
+  .reporte-grid{grid-template-columns:1fr;}
+}
+
+/* ===== MOBILE ===== */
+@media(max-width:600px){
+  .sidebar{display:none;}
+  .main-area{margin-left:0;padding-bottom:74px;}
+  .bottom-nav{display:block;}
+
+  /* Login */
+  .login-left{width:100%;padding:44px 24px;}
+  .login-right{display:none;}
+  .login-logo h1{font-size:30px;}
+  .login-tagline{font-size:13px;margin-bottom:28px;}
+
+  /* Topbar */
+  .topbar{padding:0 16px;height:52px;}
+  .tb-title{font-size:18px;}
+
+  /* Content */
+  .content{padding:14px 12px;}
+
+  /* Stats 2 cols */
+  .stats-grid{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .stat-card{padding:12px 14px;}
+  .stat-ic{font-size:18px;margin-bottom:5px;}
+  .stat-val{font-size:19px;}
+  .stat-lbl{font-size:9px;}
+  .stat-sub{font-size:10px;}
+
+  /* Dashboard grids → 1 col */
+  #page-dashboard > div:last-child{grid-template-columns:1fr !important;}
+
+  /* Card */
+  .card-header{flex-wrap:wrap;gap:8px;padding:12px 14px;}
+  .card-title{font-size:13px;}
+  .card-header > div.flex{flex-direction:column;width:100%;gap:8px;}
+  .card-header .btn{width:100%;justify-content:center;}
+  .search-wrap{width:100%;}
+  .search-wrap input{width:100%;}
+
+  /* Tables scroll */
+  .card > div, .card > table{overflow-x:auto;}
+  table{min-width:480px;}
+  td{padding:8px 10px;font-size:12px;}
+  th{padding:8px 10px;font-size:10px;}
+
+  /* Modals → bottom sheet */
+  .overlay{align-items:flex-end;padding:0;}
+  .modal{
+    width:100%;max-width:100%;margin:0;
+    border-radius:20px 20px 0 0;
+    max-height:94vh;
+  }
+  .modal-lg,.modal-xl{max-width:100%;}
+  .mh{padding:16px 18px 12px;border-radius:20px 20px 0 0;}
+  .mb{padding:14px 16px;}
+  .mf{padding:12px 16px;flex-wrap:wrap;gap:8px;}
+  .mf .btn{flex:1;justify-content:center;min-width:0;}
+
+  /* Forms */
+  .grid2{grid-template-columns:1fr;}
+  .full{grid-column:1;}
+  /* Prevent iOS zoom on inputs */
+  .fg input,.fg select,.fg textarea{font-size:16px !important;}
+  .login-field input{font-size:16px !important;}
+  .prod-row select,.prod-row input{font-size:14px;}
+
+  /* Prod rows in modal */
+  .prod-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+  }
+  .prod-row select{grid-column:1/-1;}
+  .prod-row .psub{font-size:12px;}
+
+  /* Totales */
+  .totales{padding:10px 12px;}
+  .tot-grand{font-size:14px;}
+
+  /* Reportes → 1 col */
+  .reporte-grid{grid-template-columns:1fr;}
+  #page-reportes > div:last-child{grid-template-columns:1fr !important;}
+
+  /* Factura */
+  .factura-wrap{padding:16px 12px;}
+  .fact-top{flex-direction:column;gap:10px;}
+  .fact-num{text-align:left;}
+  .fact-cliente{grid-template-columns:1fr;}
+  .fact-table{min-width:380px;}
+  .fact-tot-row,.fact-tot-grand{gap:16px;font-size:12px;}
+  .fact-tot-grand{font-size:13px;}
+
+  /* Deuda items */
+  .deuda-item{flex-direction:column;align-items:flex-start;gap:6px;padding:10px 14px;}
+
+  /* Abono previos */
+  .abono-prev{font-size:11px;}
+
+  /* Buttons */
+  .btn{font-size:12px;padding:7px 12px;}
+  .btn-xs{font-size:11px;padding:4px 8px;}
+
+  /* Toast above bottom nav */
+  .toast{left:12px;right:12px;bottom:82px;text-align:center;}
+
+  /* Stock alert */
+  .stock-alert{font-size:12px;padding:8px 12px;}
 }
 </style>
 </head>
@@ -1001,6 +1160,39 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
   </div><!-- /content -->
 </div><!-- /main-area -->
 </div><!-- /layout -->
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="bnav-inner">
+    <button class="bnav-item active" id="bn-dashboard" onclick="showPage('dashboard');setActiveNav('dashboard')">
+      <span class="bico">📊</span>Inicio
+    </button>
+    <button class="bnav-item" id="bn-ventas" onclick="showPage('ventas');setActiveNav('ventas')">
+      <span class="bico">🧾</span>Ventas
+    </button>
+    <button class="bnav-item" id="bn-nueva" onclick="openVentaModal()">
+      <span class="bico" style="font-size:30px;color:var(--rose);">＋</span>
+    </button>
+    <button class="bnav-item" id="bn-cartera" onclick="showPage('cartera');setActiveNav('cartera')">
+      <span class="bico">⏳</span>Cartera
+    </button>
+    <button class="bnav-item" id="bn-more" onclick="toggleMoreMenu()">
+      <span class="bico">☰</span>Más
+    </button>
+  </div>
+</nav>
+<div class="more-overlay" id="more-overlay" onclick="closeMoreMenu()"></div>
+<div class="more-menu" id="more-menu">
+  <div class="more-menu-title">Más opciones</div>
+  <div class="more-menu-grid">
+    <button class="mm-item" onclick="showPage('productos');setActiveNav('productos');closeMoreMenu()"><span class="mico">📦</span>Productos</button>
+    <button class="mm-item" onclick="showPage('clientes');setActiveNav('clientes');closeMoreMenu()"><span class="mico">👥</span>Clientes</button>
+    <button class="mm-item" onclick="showPage('abonos');setActiveNav('abonos');closeMoreMenu()"><span class="mico">💰</span>Abonos</button>
+    <button class="mm-item" onclick="showPage('compras');setActiveNav('compras');closeMoreMenu()"><span class="mico">🛒</span>Compras</button>
+    <button class="mm-item" onclick="showPage('proveedores');setActiveNav('proveedores');closeMoreMenu()"><span class="mico">🏭</span>Proveedores</button>
+    <button class="mm-item" onclick="showPage('reportes');setActiveNav('reportes');closeMoreMenu()"><span class="mico">📈</span>Reportes</button>
+  </div>
+</div>
 </div><!-- /app-screen -->
 
 <!-- ===== MODALES ===== -->
@@ -2258,3 +2450,31 @@ async function loadReportes(){
 </script>
 </body>
 </html>
+<script>
+// ===== BOTTOM NAV =====
+function setActiveNav(name){
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
+  const map = {dashboard:'bn-dashboard',ventas:'bn-ventas',cartera:'bn-cartera'};
+  if(map[name]) document.getElementById(map[name])?.classList.add('active');
+}
+
+function toggleMoreMenu(){
+  document.getElementById('more-menu').classList.toggle('open');
+  document.getElementById('more-overlay').classList.toggle('open');
+}
+
+function closeMoreMenu(){
+  document.getElementById('more-menu').classList.remove('open');
+  document.getElementById('more-overlay').classList.remove('open');
+}
+
+// Override showPage to also update bottom nav
+const _showPage = showPage;
+// patch setActiveNav into showPage
+const origShowPage = showPage;
+window.showPage = function(name){
+  origShowPage(name);
+  setActiveNav(name);
+  closeMoreMenu();
+};
+</script>
