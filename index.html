@@ -549,11 +549,12 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
 }
 .prod-autocomplete input:focus{border-color:var(--rose);}
 .prod-ac-dropdown{
-  position:absolute;top:100%;left:0;right:0;
+  position:fixed;
   background:var(--white);border:1.5px solid var(--mist-mid);
   border-radius:6px;box-shadow:var(--sh-lg);
   max-height:220px;overflow-y:auto;
-  z-index:500;display:none;margin-top:2px;
+  z-index:9999;display:none;margin-top:2px;
+  min-width:280px;
 }
 .prod-ac-dropdown.open{display:block;}
 .prod-ac-item{
@@ -3346,6 +3347,7 @@ function openAC(rowId){
   const tipo = _acTipo[rowId] || 'venta';
   const q = row.querySelector('.psel-txt')?.value || '';
   renderAC(rowId, q, tipo);
+  posicionarAC(rowId);
   document.getElementById(`ac-${rowId}`)?.classList.add('open');
 }
 
@@ -3359,7 +3361,19 @@ function filterAC(rowId, tipo){
   if(!row) return;
   const q = row.querySelector('.psel-txt').value.toLowerCase();
   renderAC(rowId, q, tipo);
+  posicionarAC(rowId);
   document.getElementById(`ac-${rowId}`)?.classList.add('open');
+}
+
+function posicionarAC(rowId){
+  const row = document.getElementById(rowId);
+  const dropdown = document.getElementById(`ac-${rowId}`);
+  if(!row || !dropdown) return;
+  const input = row.querySelector('.psel-txt');
+  const rect = input.getBoundingClientRect();
+  dropdown.style.top = (rect.bottom + window.scrollY + 2) + 'px';
+  dropdown.style.left = rect.left + 'px';
+  dropdown.style.width = rect.width + 'px';
 }
 
 function renderAC(rowId, q='', tipo='venta'){
