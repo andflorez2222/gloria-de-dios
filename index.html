@@ -749,6 +749,9 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
 .empty .e-ico{font-size:42px;margin-bottom:10px;}
 .empty p{font-size:13.5px;}
 
+/* DRAG & DROP PRODUCTOS */
+tr.drag-over td { background: var(--rose-soft) !important; }
+
 /* DIVIDER */
 .divider{height:1px;background:var(--mist);margin:16px 0;}
 
@@ -1897,7 +1900,7 @@ async function delCliente(id){
 // ===== PRODUCTOS =====
 async function loadProductos(){
   document.getElementById('productos-list').innerHTML = '<div class="loading"><div class="spin"></div>Cargando...</div>';
-  productos = await api('productos','GET',null,'?order=descripcion');
+  productos = await api('productos','GET',null,'?order=orden.asc,descripcion.asc');
 
   const sinStock = productos.filter(p=>(p.stock||0)<=(p.stock_minimo||5));
   const alertEl = document.getElementById('low-stock-alert');
@@ -1908,12 +1911,18 @@ async function loadProductos(){
 
   const el = document.getElementById('productos-list');
   if(!productos.length){ el.innerHTML='<div class="empty"><div class="e-ico">📦</div><p>Sin productos</p></div>'; return; }
+
   el.innerHTML = `<table>
-    <thead><tr><th>Descripción</th><th>Precio Venta</th><th>Costo</th><th>Stock</th><th>Unidad</th><th>Margen</th><th></th></tr></thead>
-    <tbody>${productos.map(p=>{
+    <thead><tr>
+      <th style="width:32px;"></th>
+      <th>Descripción</th><th>Precio Venta</th><th>Costo</th><th>Stock</th><th>Unidad</th><th>Margen</th><th></th>
+    </tr></thead>
+    <tbody id="productos-tbody">
+    ${productos.map(p=>{
       const margen = p.precio_venta && p.costo ? Math.round((p.precio_venta-p.costo)/p.precio_venta*100) : 0;
       const stockBajo = (p.stock||0)<=(p.stock_minimo||5);
-      return `<tr>
+      return `<tr draggable="true" data-id="${p.id}" style="cursor:grab;">
+        <td style="color:var(--mist-dark);font-size:16px;text-align:center;cursor:grab;" title="Arrastrar para reordenar">⠿</td>
         <td class="fw7">${p.descripcion}</td>
         <td class="c-green fw7">${fmt(p.precio_venta)}</td>
         <td>${fmt(p.costo)}</td>
@@ -1925,7 +1934,60 @@ async function loadProductos(){
           <button class="btn btn-xs btn-ghost" onclick="delProducto('${p.id}')" style="color:#dc2626;">🗑️</button>
         </td>
       </tr>`;
-    }).join('')}</tbody></table>`;
+    }).join('')}
+    </tbody></table>`;
+
+  initDragProductos();
+}
+
+let _dragSrc = null;
+
+function initDragProductos(){
+  const tbody = document.getElementById('productos-tbody');
+  if(!tbody) return;
+
+  tbody.querySelectorAll('tr[draggable]').forEach(row=>{
+    row.addEventListener('dragstart', e=>{
+      _dragSrc = row;
+      row.style.opacity = '0.4';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', e=>{
+      row.style.opacity = '';
+      tbody.querySelectorAll('tr').forEach(r=>r.classList.remove('drag-over'));
+    });
+    row.addEventListener('dragover', e=>{
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      tbody.querySelectorAll('tr').forEach(r=>r.classList.remove('drag-over'));
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('drop', async e=>{
+      e.preventDefault();
+      if(_dragSrc === row) return;
+      // Reordenar en el DOM
+      const rows = [...tbody.querySelectorAll('tr[draggable]')];
+      const srcIdx = rows.indexOf(_dragSrc);
+      const tgtIdx = rows.indexOf(row);
+      if(srcIdx < tgtIdx) tbody.insertBefore(_dragSrc, row.nextSibling);
+      else tbody.insertBefore(_dragSrc, row);
+      // Guardar orden nuevo en Supabase
+      await guardarOrdenProductos();
+    });
+  });
+}
+
+async function guardarOrdenProductos(){
+  const tbody = document.getElementById('productos-tbody');
+  if(!tbody) return;
+  const rows = [...tbody.querySelectorAll('tr[draggable]')];
+  for(let i=0; i<rows.length; i++){
+    const id = rows[i].dataset.id;
+    await api('productos','PATCH',{orden:i},`?id=eq.${id}`);
+    const p = productos.find(x=>x.id===id);
+    if(p) p.orden = i;
+  }
+  toast('Orden guardado ✓','ok');
 }
 
 function openProductoModal(){
@@ -2916,8 +2978,28 @@ function exportReporteExcel(){
   const ws3 = XLSX.utils.aoa_to_sheet(resumenData);
   XLSX.utils.book_append_sheet(wb, ws3, 'Resumen');
 
-  XLSX.writeFile(wb, `Reporte_LaGloriadeDios_${desde}_${hasta}.xlsx`);
-  toast('Excel exportado ✓','ok');
+  try{
+    // Método 1: writeFile directo
+    XLSX.writeFile(wb, `Reporte_LaGloriadeDios_${desde}_${hasta}.xlsx`);
+    toast('Excel exportado ✓','ok');
+  }catch(e){
+    // Método 2: blob + link manual (fallback para navegadores que bloquean writeFile)
+    try{
+      const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+      const blob = new Blob([wbout], {type:'application/octet-stream'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Reporte_LaGloriadeDios_${desde}_${hasta}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast('Excel exportado ✓','ok');
+    }catch(e2){
+      toast('Error al exportar: '+e2.message,'err');
+    }
+  }
 }
 
 // ===== INIT =====
