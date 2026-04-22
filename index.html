@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
   --rose: #e8447a;
@@ -1136,6 +1137,7 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
               <input type="date" id="rep-hasta" style="width:150px;">
             </div>
             <button class="btn btn-rose" onclick="loadReportes()">Generar</button>
+            <button class="btn btn-green" onclick="exportReporteExcel()" title="Exportar a Excel">📥 Excel</button>
           </div>
         </div>
         <div class="card">
@@ -1145,7 +1147,7 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
           </div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
         <div class="card">
           <div class="card-header"><span class="card-title">🏆 Productos más vendidos</span></div>
           <div id="rep-productos"><div class="empty"><p>—</p></div></div>
@@ -1154,6 +1156,12 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
           <div class="card-header"><span class="card-title">👑 Mejores clientes</span></div>
           <div id="rep-clientes"><div class="empty"><p>—</p></div></div>
         </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📋 Detalle de ventas del período</span>
+        </div>
+        <div id="rep-ventas-detalle"><div class="empty"><p>—</p></div></div>
       </div>
     </div>
 
@@ -1248,7 +1256,7 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
 <div class="overlay" id="m-proveedor">
   <div class="modal">
     <div class="mh">
-      <div class="mh-title">Nuevo Proveedor</div>
+      <div class="mh-title" id="m-prov-title">Nuevo Proveedor</div>
       <button class="xbtn" onclick="closeModal('m-proveedor')">✕</button>
     </div>
     <div class="mb">
@@ -1397,6 +1405,68 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- EDITAR ABONO -->
+<div class="overlay" id="m-edit-abono">
+  <div class="modal">
+    <div class="mh">
+      <div class="mh-title">Editar Abono</div>
+      <button class="xbtn" onclick="closeModal('m-edit-abono')">✕</button>
+    </div>
+    <div class="mb">
+      <input type="hidden" id="eab-id">
+      <div class="grid2">
+        <div class="fg"><label>Monto *</label><input type="number" id="eab-monto" min="0"></div>
+        <div class="fg"><label>Fecha</label><input type="date" id="eab-fecha"></div>
+        <div class="fg full"><label>Método</label>
+          <select id="eab-metodo">
+            <option>Efectivo</option><option>Transferencia</option>
+            <option>Nequi</option><option>Daviplata</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeModal('m-edit-abono')">Cancelar</button>
+      <button class="btn btn-rose" onclick="saveEditAbono()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDITAR COMPRA -->
+<div class="overlay" id="m-edit-compra">
+  <div class="modal modal-lg">
+    <div class="mh">
+      <div class="mh-title">Editar Compra</div>
+      <button class="xbtn" onclick="closeModal('m-edit-compra')">✕</button>
+    </div>
+    <div class="mb">
+      <input type="hidden" id="ec-id">
+      <div class="grid2">
+        <div class="fg"><label>Proveedor *</label>
+          <select id="ec-prov"><option value="">Seleccionar...</option></select>
+        </div>
+        <div class="fg"><label>Fecha</label><input type="date" id="ec-fecha"></div>
+        <div class="fg"><label>N° Pedido</label><input type="text" id="ec-num"></div>
+        <div class="fg"><label>Notas</label><input type="text" id="ec-notas"></div>
+      </div>
+      <div class="prod-section">
+        <div class="prod-section-hdr">
+          <span>Productos recibidos</span>
+          <button class="btn btn-xs btn-mist" onclick="addEditCompraRow()">+ Agregar</button>
+        </div>
+        <div id="ec-rows"></div>
+      </div>
+      <div class="totales">
+        <div class="tot-row tot-grand"><span>TOTAL COMPRA:</span><span id="t-ec">$0</span></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeModal('m-edit-compra')">Cancelar</button>
+      <button class="btn btn-rose" onclick="saveEditCompra()">💾 Guardar Cambios</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ===== CONFIG =====
@@ -1749,7 +1819,8 @@ async function loadProveedores(){
     <thead><tr><th>Nombre</th><th>Teléfono</th><th>Dirección</th><th></th></tr></thead>
     <tbody>${proveedores.map(p=>`<tr>
       <td class="fw7">${p.nombre}</td><td>${p.telefono||'—'}</td><td>${p.direccion||'—'}</td>
-      <td style="text-align:right;">
+      <td style="text-align:right;white-space:nowrap;">
+        <button class="btn btn-xs btn-ghost" onclick="editProveedor('${p.id}')">✏️</button>
         <button class="btn btn-xs btn-ghost" onclick="delProveedor('${p.id}')" style="color:#dc2626;">🗑️</button>
       </td>
     </tr>`).join('')}</tbody></table>`;
@@ -1757,15 +1828,29 @@ async function loadProveedores(){
 
 function openProveedorModal(){
   ['prov-id','prov-nombre','prov-tel','prov-dir'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-prov-title').textContent='Nuevo Proveedor';
+  openModal('m-proveedor');
+}
+
+function editProveedor(id){
+  const p = proveedores.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('prov-id').value = p.id;
+  document.getElementById('prov-nombre').value = p.nombre||'';
+  document.getElementById('prov-tel').value = p.telefono||'';
+  document.getElementById('prov-dir').value = p.direccion||'';
+  document.getElementById('m-prov-title').textContent='Editar Proveedor';
   openModal('m-proveedor');
 }
 
 async function saveProveedor(){
+  const id = document.getElementById('prov-id').value;
   const nombre = document.getElementById('prov-nombre').value.trim();
   if(!nombre){ toast('El nombre es requerido','err'); return; }
-  const data = {id:uid(), nombre, telefono:document.getElementById('prov-tel').value, direccion:document.getElementById('prov-dir').value};
+  const data = { nombre, telefono:document.getElementById('prov-tel').value, direccion:document.getElementById('prov-dir').value };
   try{
-    await api('proveedores','POST',data);
+    if(id) await api('proveedores','PATCH',data,`?id=eq.${id}`);
+    else await api('proveedores','POST',{...data,id:uid()});
     closeModal('m-proveedor'); toast('Proveedor guardado ✓','ok'); loadProveedores();
   }catch(e){ toast(e.message,'err'); }
 }
@@ -1975,7 +2060,7 @@ async function loadAbonos(){
   const el = document.getElementById('abonos-list');
   if(!abonos.length){ el.innerHTML='<div class="empty"><div class="e-ico">💰</div><p>Sin abonos</p></div>'; return; }
   el.innerHTML = `<table>
-    <thead><tr><th>Fecha</th><th>Factura</th><th>Cliente</th><th>Método</th><th>Monto</th></tr></thead>
+    <thead><tr><th>Fecha</th><th>Factura</th><th>Cliente</th><th>Método</th><th>Monto</th><th></th></tr></thead>
     <tbody>${abonos.map(a=>{
       const v = allV.find(x=>x.id===a.venta_id);
       const c = v ? clientes.find(x=>x.id===v.cliente_id) : null;
@@ -1985,8 +2070,57 @@ async function loadAbonos(){
         <td>${c?.nombre||'—'}</td>
         <td>${a.metodo||'—'}</td>
         <td class="c-green fw7">${fmt(a.monto)}</td>
+        <td style="text-align:right;white-space:nowrap;">
+          <button class="btn btn-xs btn-ghost" onclick="editAbono('${a.id}','${a.venta_id}',${a.monto},'${a.fecha}','${a.metodo||'Efectivo'}')">✏️</button>
+          <button class="btn btn-xs btn-ghost" onclick="delAbono('${a.id}','${a.venta_id}')" style="color:#dc2626;">🗑️</button>
+        </td>
       </tr>`;
     }).join('')}</tbody></table>`;
+}
+
+function editAbono(id, ventaId, monto, fecha, metodo){
+  document.getElementById('eab-id').value = id;
+  document.getElementById('eab-monto').value = monto;
+  document.getElementById('eab-fecha').value = fecha;
+  document.getElementById('eab-metodo').value = metodo;
+  openModal('m-edit-abono');
+}
+
+async function saveEditAbono(){
+  const id = document.getElementById('eab-id').value;
+  const monto = parseFloat(document.getElementById('eab-monto').value);
+  if(!monto||monto<=0){ toast('Monto inválido','err'); return; }
+  try{
+    await api('abonos','PATCH',{
+      monto,
+      fecha: document.getElementById('eab-fecha').value,
+      metodo: document.getElementById('eab-metodo').value
+    },`?id=eq.${id}`);
+    // Recalcular saldo de la venta
+    const ab = abonos.find(x=>x.id===id);
+    if(ab) await recalcSaldoVenta(ab.venta_id);
+    closeModal('m-edit-abono'); toast('Abono actualizado ✓','ok');
+    loadAbonos(); loadDashboard();
+  }catch(e){ toast(e.message,'err'); }
+}
+
+async function delAbono(id, ventaId){
+  if(!confirm('¿Eliminar este abono?')) return;
+  await api('abonos','DELETE',null,`?id=eq.${id}`);
+  await recalcSaldoVenta(ventaId);
+  toast('Abono eliminado'); loadAbonos(); loadDashboard();
+}
+
+async function recalcSaldoVenta(ventaId){
+  const v = (await api('ventas','GET',null,`?id=eq.${ventaId}`))[0];
+  if(!v) return;
+  const abs = await api('abonos','GET',null,`?venta_id=eq.${ventaId}`);
+  const totalAbonado = abs.reduce((s,a)=>s+a.monto,0);
+  const nuevoSaldo = Math.max(0,(v.total_venta||0)-totalAbonado);
+  await api('ventas','PATCH',{
+    saldo_pendiente: nuevoSaldo,
+    estado: nuevoSaldo<=0 ? 'Pagado' : 'Pendiente'
+  },`?id=eq.${ventaId}`);
 }
 
 async function openAbonoModal(ventaId){
@@ -2046,19 +2180,33 @@ async function saveAbono(){
 async function loadCompras(){
   document.getElementById('compras-list').innerHTML='<div class="loading"><div class="spin"></div>Cargando...</div>';
   if(!proveedores.length) proveedores = await api('proveedores','GET',null,'?order=nombre');
+  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
   const data = await api('compras','GET',null,'?order=created_at.desc');
   const el = document.getElementById('compras-list');
   if(!data.length){ el.innerHTML='<div class="empty"><div class="e-ico">🛒</div><p>Sin compras</p></div>'; return; }
+
+  // Cargar todos los detalles de una vez
+  const detallesAll = await api('detalle_compras','GET',null,'?limit=2000');
+
   el.innerHTML = `<table>
-    <thead><tr><th>N° Pedido</th><th>Fecha</th><th>Proveedor</th><th>Notas</th><th>Total</th></tr></thead>
+    <thead><tr><th>N° Pedido</th><th>Fecha</th><th>Proveedor</th><th>Productos</th><th>Total</th><th></th></tr></thead>
     <tbody>${data.map(c=>{
       const p = proveedores.find(x=>x.id===c.proveedor_id);
+      const dets = detallesAll.filter(d=>d.compra_id===c.id);
+      const prodsStr = dets.map(d=>{
+        const prod = productos.find(x=>x.id===d.producto_id);
+        return `<span style="display:inline-block;background:var(--mist);border-radius:4px;padding:1px 6px;font-size:11px;margin:1px;">${prod?.descripcion||'?'} ×${d.cantidad}</span>`;
+      }).join('');
       return `<tr>
         <td class="fw7 c-rose">${c.numero_pedido||'—'}</td>
         <td>${c.fecha}</td>
         <td class="fw7">${p?.nombre||'—'}</td>
-        <td>${c.notas||'—'}</td>
+        <td style="max-width:260px;">${prodsStr||'—'}</td>
         <td class="fw7">${fmt(c.total)}</td>
+        <td style="text-align:right;white-space:nowrap;">
+          <button class="btn btn-xs btn-ghost" onclick="editCompra('${c.id}')">✏️</button>
+          <button class="btn btn-xs btn-ghost" onclick="delCompra('${c.id}')" style="color:#dc2626;">🗑️</button>
+        </td>
       </tr>`;
     }).join('')}</tbody></table>`;
 }
@@ -2145,6 +2293,90 @@ async function saveCompra(){
     }
     closeModal('m-compra'); toast('Compra guardada ✓','ok'); loadCompras(); preloadAll();
   }catch(e){ toast(e.message,'err'); }
+}
+
+async function editCompra(id){
+  if(!proveedores.length) proveedores = await api('proveedores','GET',null,'?order=nombre');
+  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
+  const c = (await api('compras','GET',null,`?id=eq.${id}`))[0];
+  const dets = await api('detalle_compras','GET',null,`?compra_id=eq.${id}`);
+
+  document.getElementById('ec-id').value = c.id;
+  document.getElementById('ec-prov').innerHTML = '<option value="">Seleccionar...</option>'+
+    proveedores.map(p=>`<option value="${p.id}" ${p.id===c.proveedor_id?'selected':''}>${p.nombre}</option>`).join('');
+  document.getElementById('ec-fecha').value = c.fecha||'';
+  document.getElementById('ec-num').value = c.numero_pedido||'';
+  document.getElementById('ec-notas').value = c.notas||'';
+
+  document.getElementById('ec-rows').innerHTML='';
+  document.getElementById('t-ec').textContent='$0';
+  dets.forEach(d=>addEditCompraRow(d));
+  if(!dets.length) addEditCompraRow();
+  calcECRow();
+  openModal('m-edit-compra');
+}
+
+function addEditCompraRow(d=null){
+  rowIdx++;
+  const id=`ecr-${rowIdx}`;
+  const div=document.createElement('div');
+  div.className='prod-row'; div.id=id;
+  div.innerHTML=`
+    <select class="psel" onchange="calcECRow()">
+      <option value="">Seleccionar...</option>
+      ${productos.map(p=>`<option value="${p.id}" data-costo="${p.costo}" ${d&&d.producto_id===p.id?'selected':''}>${p.descripcion}</option>`).join('')}
+    </select>
+    <input type="number" class="pcant" value="${d?d.cantidad:1}" min="1" oninput="calcECRow()">
+    <input type="number" class="pprec" value="${d?d.costo_unitario:0}" min="0" oninput="calcECRow()">
+    <span class="prod-sub-lbl psub">${d?fmt(d.cantidad*d.costo_unitario):'$0'}</span>
+    <button onclick="document.getElementById('${id}').remove();calcECRow()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px;">✕</button>`;
+  document.getElementById('ec-rows').appendChild(div);
+}
+
+function calcECRow(){
+  let total=0;
+  document.querySelectorAll('#ec-rows .prod-row').forEach(r=>{
+    const cant=parseFloat(r.querySelector('.pcant')?.value)||0;
+    const prec=parseFloat(r.querySelector('.pprec')?.value)||0;
+    r.querySelector('.psub').textContent=fmt(cant*prec);
+    total+=cant*prec;
+  });
+  document.getElementById('t-ec').textContent=fmt(total);
+}
+
+async function saveEditCompra(){
+  const id=document.getElementById('ec-id').value;
+  const provId=document.getElementById('ec-prov').value;
+  if(!provId){ toast('Selecciona un proveedor','err'); return; }
+  const rows=[...document.querySelectorAll('#ec-rows .prod-row')];
+  const detalles=rows.map(r=>({
+    producto_id:r.querySelector('.psel').value,
+    cantidad:parseFloat(r.querySelector('.pcant').value)||0,
+    costo_unitario:parseFloat(r.querySelector('.pprec').value)||0
+  })).filter(d=>d.producto_id&&d.cantidad>0);
+  if(!detalles.length){ toast('Agrega productos','err'); return; }
+  const total=detalles.reduce((s,d)=>s+d.cantidad*d.costo_unitario,0);
+  try{
+    await api('compras','PATCH',{
+      proveedor_id:provId,
+      fecha:document.getElementById('ec-fecha').value,
+      numero_pedido:document.getElementById('ec-num').value,
+      notas:document.getElementById('ec-notas').value,
+      total
+    },`?id=eq.${id}`);
+    await api('detalle_compras','DELETE',null,`?compra_id=eq.${id}`);
+    for(const d of detalles){
+      await api('detalle_compras','POST',{id:uid(),compra_id:id,...d});
+    }
+    closeModal('m-edit-compra'); toast('Compra actualizada ✓','ok'); loadCompras(); preloadAll();
+  }catch(e){ toast(e.message,'err'); }
+}
+
+async function delCompra(id){
+  if(!confirm('¿Eliminar esta compra?')) return;
+  await api('detalle_compras','DELETE',null,`?compra_id=eq.${id}`);
+  await api('compras','DELETE',null,`?id=eq.${id}`);
+  toast('Compra eliminada'); loadCompras();
 }
 
 // ===== FACTURA =====
@@ -2355,6 +2587,8 @@ async function exportPDF(){
 }
 
 // ===== REPORTES =====
+let _repData = null; // cache para exportar
+
 function initReportes(){
   const now = new Date();
   const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0');
@@ -2377,13 +2611,15 @@ async function loadReportes(){
   const totalRecaudado = vPeriodo.reduce((s,v)=>s+(v.total_venta||0)-(v.saldo_pendiente||0),0);
   const pendiente = vPeriodo.reduce((s,v)=>s+(v.saldo_pendiente||0),0);
 
-  // Utilidad
   const detallesPeriodo = detallesAll.filter(d=>ventaIds.includes(d.venta_id));
   let utilidad = 0;
   detallesPeriodo.forEach(d=>{
     const p = productos.find(x=>x.id===d.producto_id);
     if(p) utilidad += (d.precio_unitario - (p.costo||0)) * d.cantidad;
   });
+
+  // Guardar para exportar
+  _repData = { desde, hasta, vPeriodo, detallesPeriodo, totalVentas, totalRecaudado, pendiente, utilidad };
 
   document.getElementById('rep-resumen').innerHTML = `
     <div style="display:grid;gap:10px;">
@@ -2411,8 +2647,7 @@ async function loadReportes(){
     prodCount[d.producto_id].cant += d.cantidad;
     prodCount[d.producto_id].total += d.cantidad*d.precio_unitario;
   });
-  const topProds = Object.entries(prodCount)
-    .sort((a,b)=>b[1].total-a[1].total).slice(0,8);
+  const topProds = Object.entries(prodCount).sort((a,b)=>b[1].total-a[1].total).slice(0,8);
 
   document.getElementById('rep-productos').innerHTML = topProds.length ?
     `<table><thead><tr><th>Producto</th><th>Cant.</th><th>Total</th></tr></thead><tbody>
@@ -2431,8 +2666,7 @@ async function loadReportes(){
     cliCount[v.cliente_id].total += v.total_venta||0;
     cliCount[v.cliente_id].n++;
   });
-  const topClis = Object.entries(cliCount)
-    .sort((a,b)=>b[1].total-a[1].total).slice(0,8);
+  const topClis = Object.entries(cliCount).sort((a,b)=>b[1].total-a[1].total).slice(0,8);
 
   document.getElementById('rep-clientes').innerHTML = topClis.length ?
     `<table><thead><tr><th>Cliente</th><th>Compras</th><th>Total</th></tr></thead><tbody>
@@ -2443,6 +2677,84 @@ async function loadReportes(){
         <td>${d.n}</td><td class="fw7">${fmt(d.total)}</td>
       </tr>`;
     }).join('')}</tbody></table>` : '<div class="empty"><p>Sin datos</p></div>';
+
+  // Detalle ventas
+  document.getElementById('rep-ventas-detalle').innerHTML = vPeriodo.length ?
+    `<table>
+      <thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Método</th><th>Total</th><th>Abonado</th><th>Saldo</th><th>Estado</th></tr></thead>
+      <tbody>${vPeriodo.map(v=>{
+        const c = clientes.find(x=>x.id===v.cliente_id);
+        const abonado = (v.total_venta||0)-(v.saldo_pendiente||0);
+        return `<tr>
+          <td class="fw7 c-rose">#${v.numero_factura}</td>
+          <td>${v.fecha}</td>
+          <td>${c?.nombre||'—'}</td>
+          <td>${v.metodo_pago||'—'}</td>
+          <td class="fw7">${fmt(v.total_venta)}</td>
+          <td class="c-green">${fmt(abonado)}</td>
+          <td class="${v.saldo_pendiente>0?'c-amber fw7':'c-green'}">${fmt(v.saldo_pendiente)}</td>
+          <td><span class="badge ${v.estado==='Pagado'?'b-green':'b-amber'}">${v.estado||'Pendiente'}</span></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>` : '<div class="empty"><p>Sin ventas en este período</p></div>';
+}
+
+function exportReporteExcel(){
+  if(!_repData){ toast('Primero genera el reporte','err'); return; }
+  const { desde, hasta, vPeriodo, detallesPeriodo, totalVentas, totalRecaudado, pendiente, utilidad } = _repData;
+
+  const wb = XLSX.utils.book_new();
+
+  // Hoja 1: Ventas
+  const ventasData = [
+    ['#Factura','Fecha','Cliente','Método de Pago','Total Venta','Abonado','Saldo Pendiente','Estado']
+  ];
+  vPeriodo.forEach(v=>{
+    const c = clientes.find(x=>x.id===v.cliente_id);
+    const abonado = (v.total_venta||0)-(v.saldo_pendiente||0);
+    ventasData.push([
+      v.numero_factura, v.fecha, c?.nombre||'—',
+      v.metodo_pago||'—', v.total_venta||0, abonado,
+      v.saldo_pendiente||0, v.estado||'Pendiente'
+    ]);
+  });
+  // Fila resumen
+  ventasData.push([]);
+  ventasData.push(['','','','TOTAL',totalVentas,totalRecaudado,pendiente,'']);
+  const ws1 = XLSX.utils.aoa_to_sheet(ventasData);
+  XLSX.utils.book_append_sheet(wb, ws1, 'Ventas');
+
+  // Hoja 2: Detalle productos
+  const prodData = [['Factura','Fecha','Cliente','Producto','Cantidad','Precio Unit.','Subtotal']];
+  detallesPeriodo.forEach(d=>{
+    const v = vPeriodo.find(x=>x.id===d.venta_id);
+    const c = v ? clientes.find(x=>x.id===v.cliente_id) : null;
+    const p = productos.find(x=>x.id===d.producto_id);
+    prodData.push([
+      v?'#'+v.numero_factura:'—', v?.fecha||'—', c?.nombre||'—',
+      p?.descripcion||'—', d.cantidad, d.precio_unitario, d.cantidad*d.precio_unitario
+    ]);
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(prodData);
+  XLSX.utils.book_append_sheet(wb, ws2, 'Detalle Productos');
+
+  // Hoja 3: Resumen
+  const resumenData = [
+    ['Reporte La Gloria de Dios'],
+    [`Período: ${desde} al ${hasta}`],
+    [],
+    ['Indicador','Valor'],
+    ['Total Ventas', totalVentas],
+    ['Total Recaudado', totalRecaudado],
+    ['Pendiente de Cobro', pendiente],
+    ['Número de Facturas', vPeriodo.length],
+    ['Utilidad Bruta', utilidad],
+  ];
+  const ws3 = XLSX.utils.aoa_to_sheet(resumenData);
+  XLSX.utils.book_append_sheet(wb, ws3, 'Resumen');
+
+  XLSX.writeFile(wb, `Reporte_LaGloriadeDios_${desde}_${hasta}.xlsx`);
+  toast('Excel exportado ✓','ok');
 }
 
 // ===== INIT =====
