@@ -653,6 +653,44 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
   line-height:1.7;
 }
 
+/* ===== LISTA PRÓXIMAS COMPRAS ===== */
+.pc-item{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  padding:12px 16px;
+  border-bottom:1px solid var(--mist);
+  align-items:start;
+  transition:background .1s;
+}
+.pc-item:hover{background:var(--rose-pale);}
+.pc-item:last-child{border-bottom:none;}
+.pc-item.completado{opacity:.5;}
+.pc-item.completado .pc-nombre{text-decoration:line-through;}
+
+.pc-nombre{font-weight:700;font-size:13.5px;color:var(--ink);}
+.pc-meta{font-size:11px;color:var(--mist-dark);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap;}
+.pc-nota{font-size:12px;color:var(--ink-soft);margin-top:4px;font-style:italic;}
+
+.pr-badge{
+  display:inline-flex;align-items:center;
+  padding:2px 8px;border-radius:20px;
+  font-size:10px;font-weight:800;letter-spacing:.5px;
+}
+.pr-alta{background:#fee2e2;color:#dc2626;}
+.pr-media{background:var(--amber-light);color:var(--amber);}
+.pr-baja{background:var(--green-light);color:var(--green);}
+
+.sugerido-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-radius:8px;
+  background:var(--gold-light);border:1px solid #f0d898;
+  margin-bottom:8px;gap:10px;
+}
+.sugerido-item .si-info{flex:1;}
+.sugerido-item .si-nombre{font-weight:700;font-size:13px;}
+.sugerido-item .si-meta{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+
 /* ALERTA STOCK */
 .stock-alert{
   display:flex;align-items:center;gap:10px;
@@ -963,6 +1001,7 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
 
     <div class="nav-sec">Compras</div>
     <div class="ni" onclick="showPage('compras')"><span class="ico">🛒</span><span>Compras</span></div>
+    <div class="ni" onclick="showPage('proximas')"><span class="ico">📋</span><span>Lista de Compras</span></div>
 
     <div class="nav-sec">Inventario</div>
     <div class="ni" onclick="showPage('productos')"><span class="ico">📦</span><span>Productos</span></div>
@@ -1165,6 +1204,63 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
       </div>
     </div>
 
+    <!-- PRÓXIMAS COMPRAS -->
+    <div class="page" id="page-proximas">
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" id="tab-lista" onclick="switchPCTab('lista')">📋 Mi Lista</button>
+        <button class="tab" id="tab-sugeridos" onclick="switchPCTab('sugeridos')">🤖 Sugeridos por ventas</button>
+      </div>
+
+      <!-- Tab Lista -->
+      <div id="pc-tab-lista">
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-header">
+            <span class="card-title">Lista de productos a comprar</span>
+            <div class="flex aic g8">
+              <button class="btn btn-sm btn-mist" onclick="limpiarCompletados()">🗑️ Limpiar completados</button>
+              <button class="btn btn-sm btn-green" onclick="convertirListaEnCompra()">🛒 Convertir en Compra</button>
+              <button class="btn btn-sm btn-rose" onclick="openPCModal()">+ Agregar</button>
+            </div>
+          </div>
+          <!-- Filtros -->
+          <div style="padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--mist);">
+            <button class="btn btn-xs btn-mist" onclick="filterPC('todas')" id="pcf-todas" style="background:var(--ink);color:white;">Todas</button>
+            <button class="btn btn-xs btn-ghost" onclick="filterPC('alta')" id="pcf-alta">🔴 Alta prioridad</button>
+            <button class="btn btn-xs btn-ghost" onclick="filterPC('media')" id="pcf-media">🟡 Media</button>
+            <button class="btn btn-xs btn-ghost" onclick="filterPC('baja')" id="pcf-baja">🟢 Baja</button>
+            <button class="btn btn-xs btn-ghost" onclick="filterPC('pendientes')" id="pcf-pendientes">⏳ Pendientes</button>
+          </div>
+          <div id="pc-list"><div class="loading"><div class="spin"></div>Cargando...</div></div>
+        </div>
+      </div>
+
+      <!-- Tab Sugeridos -->
+      <div id="pc-tab-sugeridos" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">⚠️ Stock bajo (requieren reposición)</span>
+            </div>
+            <div style="padding:14px 16px;" id="sug-stock-bajo"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">🔥 Más vendidos últimos 30 días</span>
+            </div>
+            <div style="padding:14px 16px;" id="sug-mas-vendidos"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <div class="card-header">
+            <span class="card-title">🤖 Pedido sugerido inteligente</span>
+            <button class="btn btn-sm btn-rose" onclick="agregarTodosSugeridos()">+ Agregar todos a mi lista</button>
+          </div>
+          <div style="padding:14px 16px;" id="sug-pedido-inteligente"></div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main-area -->
 </div><!-- /layout -->
@@ -1197,6 +1293,7 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
     <button class="mm-item" onclick="showPage('clientes');setActiveNav('clientes');closeMoreMenu()"><span class="mico">👥</span>Clientes</button>
     <button class="mm-item" onclick="showPage('abonos');setActiveNav('abonos');closeMoreMenu()"><span class="mico">💰</span>Abonos</button>
     <button class="mm-item" onclick="showPage('compras');setActiveNav('compras');closeMoreMenu()"><span class="mico">🛒</span>Compras</button>
+    <button class="mm-item" onclick="showPage('proximas');setActiveNav('proximas');closeMoreMenu()"><span class="mico">📋</span>Lista Compras</button>
     <button class="mm-item" onclick="showPage('proveedores');setActiveNav('proveedores');closeMoreMenu()"><span class="mico">🏭</span>Proveedores</button>
     <button class="mm-item" onclick="showPage('reportes');setActiveNav('reportes');closeMoreMenu()"><span class="mico">📈</span>Reportes</button>
   </div>
@@ -1403,8 +1500,84 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
   </div>
 </div>
 
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
+<!-- PRÓXIMA COMPRA ITEM -->
+<div class="overlay" id="m-pc">
+  <div class="modal">
+    <div class="mh">
+      <div class="mh-title" id="m-pc-title">Agregar a lista de compras</div>
+      <button class="xbtn" onclick="closeModal('m-pc')">✕</button>
+    </div>
+    <div class="mb">
+      <input type="hidden" id="pc-id">
+      <div class="grid2">
+        <div class="fg full">
+          <label>Producto *</label>
+          <select id="pc-producto">
+            <option value="">Seleccionar producto...</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Cantidad sugerida</label>
+          <input type="number" id="pc-cantidad" placeholder="0" min="1">
+        </div>
+        <div class="fg">
+          <label>Prioridad</label>
+          <select id="pc-prioridad">
+            <option value="alta">🔴 Alta</option>
+            <option value="media" selected>🟡 Media</option>
+            <option value="baja">🟢 Baja</option>
+          </select>
+        </div>
+        <div class="fg full">
+          <label>Nota / observación</label>
+          <textarea id="pc-nota" rows="2" placeholder="Ej: pedir al proveedor X, precio máximo $Y, urgente para fin de mes..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeModal('m-pc')">Cancelar</button>
+      <button class="btn btn-rose" onclick="savePC()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONVERTIR LISTA EN COMPRA -->
+<div class="overlay" id="m-pc-compra">
+  <div class="modal modal-lg">
+    <div class="mh">
+      <div class="mh-title">Convertir lista en Compra</div>
+      <button class="xbtn" onclick="closeModal('m-pc-compra')">✕</button>
+    </div>
+    <div class="mb">
+      <div style="background:var(--gold-light);border:1px solid #f0d898;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;">
+        💡 Se creará una compra con los productos <strong>pendientes</strong> de tu lista. Ajusta cantidades y precios antes de guardar.
+      </div>
+      <div class="grid2">
+        <div class="fg">
+          <label>Proveedor *</label>
+          <select id="pcc-prov"><option value="">Seleccionar...</option></select>
+        </div>
+        <div class="fg"><label>Fecha</label><input type="date" id="pcc-fecha"></div>
+        <div class="fg"><label>N° Pedido</label><input type="text" id="pcc-num" placeholder="PED-001"></div>
+        <div class="fg"><label>Notas</label><input type="text" id="pcc-notas"></div>
+      </div>
+      <div class="prod-section">
+        <div class="prod-section-hdr">
+          <span>Productos de la lista</span>
+          <button class="btn btn-xs btn-mist" onclick="addCompraRow()">+ Agregar</button>
+        </div>
+        <div id="pcc-rows"></div>
+      </div>
+      <div class="totales">
+        <div class="tot-row tot-grand"><span>TOTAL COMPRA:</span><span id="t-pcc">$0</span></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeModal('m-pc-compra')">Cancelar</button>
+      <button class="btn btn-rose" onclick="savePCCompra()">💾 Crear Compra</button>
+    </div>
+  </div>
+</div>
 
 <!-- EDITAR ABONO -->
 <div class="overlay" id="m-edit-abono">
@@ -1575,7 +1748,8 @@ function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 const titles = {
   dashboard:'Dashboard', ventas:'Ventas / Facturas',
   cartera:'Cartera de Cobros', abonos:'Historial de Abonos',
-  compras:'Compras / Pedidos', productos:'Productos & Inventario',
+  compras:'Compras / Pedidos', proximas:'📋 Lista de Próximas Compras',
+  productos:'Productos & Inventario',
   proveedores:'Proveedores', clientes:'Clientes', reportes:'Reportes'
 };
 
@@ -1590,7 +1764,7 @@ function showPage(name){
 
   const loaders = {
     ventas: loadVentas, cartera: loadCartera, abonos: loadAbonos,
-    compras: loadCompras, productos: loadProductos,
+    compras: loadCompras, proximas: loadProximas, productos: loadProductos,
     proveedores: loadProveedores, clientes: loadClientes,
     dashboard: loadDashboard, reportes: initReportes
   };
@@ -2759,6 +2933,342 @@ function exportReporteExcel(){
 
 // ===== INIT =====
 // Agregar columnas faltantes en productos si no existen (se maneja desde SQL)
+
+// ===== PRÓXIMAS COMPRAS =====
+let listaPC = [];
+let pcFiltro = 'todas';
+
+function switchPCTab(tab){
+  document.getElementById('pc-tab-lista').style.display = tab==='lista' ? 'block' : 'none';
+  document.getElementById('pc-tab-sugeridos').style.display = tab==='sugeridos' ? 'block' : 'none';
+  document.getElementById('tab-lista').classList.toggle('active', tab==='lista');
+  document.getElementById('tab-sugeridos').classList.toggle('active', tab==='sugeridos');
+  if(tab==='sugeridos') loadSugeridos();
+}
+
+function filterPC(f){
+  pcFiltro = f;
+  ['todas','alta','media','baja','pendientes'].forEach(x=>{
+    const btn = document.getElementById(`pcf-${x}`);
+    if(btn){ btn.style.background=''; btn.style.color=''; btn.classList.remove('btn-ghost'); btn.classList.add('btn-ghost'); }
+  });
+  const active = document.getElementById(`pcf-${f}`);
+  if(active){ active.style.background='var(--ink)'; active.style.color='white'; }
+  renderPC();
+}
+
+async function loadProximas(){
+  document.getElementById('pc-list').innerHTML='<div class="loading"><div class="spin"></div>Cargando...</div>';
+  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
+  listaPC = await api('lista_compras','GET',null,'?order=prioridad,created_at.desc');
+  renderPC();
+}
+
+function renderPC(){
+  const el = document.getElementById('pc-list');
+  let data = [...listaPC];
+  if(pcFiltro==='alta') data = data.filter(x=>x.prioridad==='alta');
+  else if(pcFiltro==='media') data = data.filter(x=>x.prioridad==='media');
+  else if(pcFiltro==='baja') data = data.filter(x=>x.prioridad==='baja');
+  else if(pcFiltro==='pendientes') data = data.filter(x=>!x.completado);
+
+  // Ordenar: alta primero, luego pendientes antes de completados
+  const orden = {alta:0,media:1,baja:2};
+  data.sort((a,b)=>{
+    if(a.completado !== b.completado) return a.completado ? 1 : -1;
+    return (orden[a.prioridad]||1) - (orden[b.prioridad]||1);
+  });
+
+  if(!data.length){ el.innerHTML='<div class="empty"><div class="e-ico">📋</div><p>Lista vacía — agrega productos para tu próxima compra</p></div>'; return; }
+
+  el.innerHTML = data.map(item=>{
+    const prod = productos.find(x=>x.id===item.producto_id);
+    const prClase = item.prioridad==='alta'?'pr-alta':item.prioridad==='baja'?'pr-baja':'pr-media';
+    const prLabel = item.prioridad==='alta'?'🔴 Alta':item.prioridad==='baja'?'🟢 Baja':'🟡 Media';
+    return `<div class="pc-item ${item.completado?'completado':''}" id="pci-${item.id}">
+      <div>
+        <div class="pc-nombre">${prod?.descripcion||'Producto desconocido'}</div>
+        <div class="pc-meta">
+          <span class="pr-badge ${prClase}">${prLabel}</span>
+          ${item.cantidad_sugerida?`<span>📦 Cant. sugerida: <strong>${item.cantidad_sugerida}</strong></span>`:''}
+          ${prod?.stock!=null?`<span>Stock actual: <strong>${prod.stock} ${prod.unidad||'und'}</strong></span>`:''}
+          ${prod?.costo?`<span>Costo ref: <strong>${fmt(prod.costo)}</strong></span>`:''}
+        </div>
+        ${item.nota?`<div class="pc-nota">💬 ${item.nota}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+        <button class="btn btn-xs ${item.completado?'btn-mist':'btn-green'}" onclick="toggleCompletado('${item.id}',${!item.completado})">
+          ${item.completado?'↩️ Reactivar':'✅ Completado'}
+        </button>
+        <button class="btn btn-xs btn-ghost" onclick="editPC('${item.id}')">✏️</button>
+        <button class="btn btn-xs btn-ghost" onclick="delPC('${item.id}')" style="color:#dc2626;">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openPCModal(){
+  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
+  document.getElementById('pc-id').value='';
+  document.getElementById('pc-producto').innerHTML =
+    '<option value="">Seleccionar producto...</option>'+
+    productos.map(p=>`<option value="${p.id}">${p.descripcion} (stock: ${p.stock||0})</option>`).join('');
+  document.getElementById('pc-cantidad').value='';
+  document.getElementById('pc-prioridad').value='media';
+  document.getElementById('pc-nota').value='';
+  document.getElementById('m-pc-title').textContent='Agregar a lista de compras';
+  openModal('m-pc');
+}
+
+function editPC(id){
+  const item = listaPC.find(x=>x.id===id);
+  if(!item) return;
+  document.getElementById('pc-id').value=item.id;
+  document.getElementById('pc-producto').innerHTML =
+    '<option value="">Seleccionar producto...</option>'+
+    productos.map(p=>`<option value="${p.id}" ${p.id===item.producto_id?'selected':''}>${p.descripcion} (stock: ${p.stock||0})</option>`).join('');
+  document.getElementById('pc-cantidad').value=item.cantidad_sugerida||'';
+  document.getElementById('pc-prioridad').value=item.prioridad||'media';
+  document.getElementById('pc-nota').value=item.nota||'';
+  document.getElementById('m-pc-title').textContent='Editar item';
+  openModal('m-pc');
+}
+
+async function savePC(){
+  const id = document.getElementById('pc-id').value;
+  const prodId = document.getElementById('pc-producto').value;
+  if(!prodId){ toast('Selecciona un producto','err'); return; }
+  const data = {
+    producto_id: prodId,
+    cantidad_sugerida: parseFloat(document.getElementById('pc-cantidad').value)||null,
+    prioridad: document.getElementById('pc-prioridad').value,
+    nota: document.getElementById('pc-nota').value.trim()||null,
+    completado: false
+  };
+  try{
+    if(id) await api('lista_compras','PATCH',data,`?id=eq.${id}`);
+    else await api('lista_compras','POST',{...data, id:uid()});
+    closeModal('m-pc'); toast('Guardado ✓','ok'); loadProximas();
+  }catch(e){ toast(e.message,'err'); }
+}
+
+async function toggleCompletado(id, val){
+  await api('lista_compras','PATCH',{completado:val},`?id=eq.${id}`);
+  const item = listaPC.find(x=>x.id===id);
+  if(item) item.completado=val;
+  renderPC();
+}
+
+async function delPC(id){
+  if(!confirm('¿Eliminar este item?')) return;
+  await api('lista_compras','DELETE',null,`?id=eq.${id}`);
+  listaPC = listaPC.filter(x=>x.id!==id);
+  renderPC(); toast('Eliminado');
+}
+
+async function limpiarCompletados(){
+  const completados = listaPC.filter(x=>x.completado);
+  if(!completados.length){ toast('No hay completados','err'); return; }
+  if(!confirm(`¿Eliminar ${completados.length} item(s) completados?`)) return;
+  for(const item of completados){
+    await api('lista_compras','DELETE',null,`?id=eq.${item.id}`);
+  }
+  toast(`${completados.length} eliminados`,'ok'); loadProximas();
+}
+
+// ===== SUGERIDOS INTELIGENTES =====
+let _sugeridosData = [];
+
+async function loadSugeridos(){
+  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
+
+  // Stock bajo
+  const stockBajo = productos.filter(p=>(p.stock||0)<=(p.stock_minimo||5)).sort((a,b)=>a.stock-b.stock);
+  const elStock = document.getElementById('sug-stock-bajo');
+  elStock.innerHTML = stockBajo.length ? stockBajo.map(p=>`
+    <div class="sugerido-item">
+      <div class="si-info">
+        <div class="si-nombre">${p.descripcion}</div>
+        <div class="si-meta">Stock: <strong style="color:var(--amber)">${p.stock||0}</strong> / Mín: ${p.stock_minimo||5} ${p.unidad||'und'}</div>
+      </div>
+      <button class="btn btn-xs btn-rose" onclick="agregarSugerido('${p.id}','alta',${Math.max(1,(p.stock_minimo||5)*2-(p.stock||0))})">+ Lista</button>
+    </div>`) .join('') : '<div class="empty"><p>🎉 Todo con stock suficiente</p></div>';
+
+  // Más vendidos últimos 30 días
+  const hace30 = new Date(); hace30.setDate(hace30.getDate()-30);
+  const desde30 = hace30.toISOString().split('T')[0];
+  const ventasRec = await api('ventas','GET',null,`?fecha=gte.${desde30}&select=id`);
+  const vIds = ventasRec.map(v=>v.id);
+  let detallesRec = [];
+  if(vIds.length){
+    detallesRec = await api('detalle_ventas','GET',null,`?limit=2000`);
+    detallesRec = detallesRec.filter(d=>vIds.includes(d.venta_id));
+  }
+
+  const conteo = {};
+  detallesRec.forEach(d=>{
+    if(!conteo[d.producto_id]) conteo[d.producto_id]={cant:0,total:0};
+    conteo[d.producto_id].cant += d.cantidad;
+    conteo[d.producto_id].total += d.cantidad*d.precio_unitario;
+  });
+  const topVendidos = Object.entries(conteo).sort((a,b)=>b[1].cant-a[1].cant).slice(0,10);
+
+  const elVendidos = document.getElementById('sug-mas-vendidos');
+  elVendidos.innerHTML = topVendidos.length ? topVendidos.map(([pid,d])=>{
+    const p = productos.find(x=>x.id===pid);
+    return `<div class="sugerido-item">
+      <div class="si-info">
+        <div class="si-nombre">${p?.descripcion||'—'}</div>
+        <div class="si-meta">Vendidos: <strong>${d.cant}</strong> und · Stock: <strong>${p?.stock||0}</strong></div>
+      </div>
+      <button class="btn btn-xs btn-rose" onclick="agregarSugerido('${pid}','media',${Math.ceil(d.cant/4)})">+ Lista</button>
+    </div>`;
+  }).join('') : '<div class="empty"><p>Sin datos de ventas recientes</p></div>';
+
+  // Pedido inteligente: combina stock bajo + más vendidos sin duplicar
+  const yaEnLista = new Set(listaPC.filter(x=>!x.completado).map(x=>x.producto_id));
+  const pedidoMap = {};
+
+  stockBajo.forEach(p=>{
+    if(!pedidoMap[p.id]) pedidoMap[p.id]={prod:p, prioridad:'alta', cantSug: Math.max(1,(p.stock_minimo||5)*2-(p.stock||0)), razon:'Stock bajo'};
+  });
+  topVendidos.forEach(([pid,d])=>{
+    const p = productos.find(x=>x.id===pid);
+    if(!p) return;
+    if(pedidoMap[pid]) pedidoMap[pid].razon += ' + Muy vendido';
+    else pedidoMap[pid]={prod:p, prioridad:'media', cantSug:Math.ceil(d.cant/2), razon:'Muy vendido'};
+  });
+
+  _sugeridosData = Object.values(pedidoMap);
+  const elPedido = document.getElementById('sug-pedido-inteligente');
+  const sinLista = _sugeridosData.filter(x=>!yaEnLista.has(x.prod.id));
+
+  elPedido.innerHTML = sinLista.length ? `
+    <div style="font-size:12px;color:var(--ink-soft);margin-bottom:12px;">
+      ${sinLista.length} producto(s) sugeridos basados en stock actual y tendencia de ventas de los últimos 30 días.
+    </div>
+    <table><thead><tr><th>Producto</th><th>Stock</th><th>Cant. sugerida</th><th>Motivo</th><th>Prioridad</th><th></th></tr></thead>
+    <tbody>${sinLista.map(x=>`<tr>
+      <td class="fw7">${x.prod.descripcion}</td>
+      <td class="${(x.prod.stock||0)<=(x.prod.stock_minimo||5)?'c-amber fw7':''}">${x.prod.stock||0} ${x.prod.unidad||'und'}</td>
+      <td class="fw7">${x.cantSug}</td>
+      <td style="font-size:12px;color:var(--ink-soft);">${x.razon}</td>
+      <td><span class="pr-badge ${x.prioridad==='alta'?'pr-alta':'pr-media'}">${x.prioridad==='alta'?'🔴 Alta':'🟡 Media'}</span></td>
+      <td><button class="btn btn-xs btn-rose" onclick="agregarSugerido('${x.prod.id}','${x.prioridad}',${x.cantSug})">+ Lista</button></td>
+    </tr>`).join('')}</tbody></table>` :
+    '<div class="empty"><p>✅ Todos los sugeridos ya están en tu lista</p></div>';
+}
+
+async function agregarSugerido(prodId, prioridad, cant){
+  const yaExiste = listaPC.find(x=>x.producto_id===prodId && !x.completado);
+  if(yaExiste){ toast('Ya está en tu lista','err'); return; }
+  try{
+    await api('lista_compras','POST',{
+      id:uid(), producto_id:prodId,
+      prioridad, cantidad_sugerida:cant, completado:false, nota:null
+    });
+    toast('Agregado a tu lista ✓','ok');
+    await loadProximas();
+    loadSugeridos();
+  }catch(e){ toast(e.message,'err'); }
+}
+
+async function agregarTodosSugeridos(){
+  const yaEnLista = new Set(listaPC.filter(x=>!x.completado).map(x=>x.producto_id));
+  const nuevos = _sugeridosData.filter(x=>!yaEnLista.has(x.prod.id));
+  if(!nuevos.length){ toast('Todos ya están en tu lista','err'); return; }
+  for(const x of nuevos){
+    await api('lista_compras','POST',{id:uid(),producto_id:x.prod.id,prioridad:x.prioridad,cantidad_sugerida:x.cantSug,completado:false,nota:null});
+  }
+  toast(`${nuevos.length} productos agregados ✓`,'ok');
+  await loadProximas();
+  loadSugeridos();
+}
+
+// ===== CONVERTIR LISTA EN COMPRA =====
+async function convertirListaEnCompra(){
+  const pendientes = listaPC.filter(x=>!x.completado);
+  if(!pendientes.length){ toast('No hay items pendientes en la lista','err'); return; }
+  if(!proveedores.length) proveedores = await api('proveedores','GET',null,'?order=nombre');
+  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
+
+  document.getElementById('pcc-prov').innerHTML = '<option value="">Seleccionar proveedor...</option>'+
+    proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+  document.getElementById('pcc-fecha').value = today();
+  document.getElementById('pcc-num').value='';
+  document.getElementById('pcc-notas').value='';
+
+  // Llenar filas con los pendientes
+  const container = document.getElementById('pcc-rows');
+  container.innerHTML='';
+  pendientes.forEach(item=>{
+    const prod = productos.find(x=>x.id===item.producto_id);
+    rowIdx++;
+    const id=`pccr-${rowIdx}`;
+    const div=document.createElement('div');
+    div.className='prod-row'; div.id=id;
+    div.innerHTML=`
+      <select class="psel" onchange="calcPCCRow()">
+        ${productos.map(p=>`<option value="${p.id}" data-costo="${p.costo}" ${p.id===item.producto_id?'selected':''}>${p.descripcion}</option>`).join('')}
+      </select>
+      <input type="number" class="pcant" value="${item.cantidad_sugerida||1}" min="1" oninput="calcPCCRow()">
+      <input type="number" class="pprec" value="${prod?.costo||0}" min="0" oninput="calcPCCRow()">
+      <span class="prod-sub-lbl psub">${fmt((item.cantidad_sugerida||1)*(prod?.costo||0))}</span>
+      <button onclick="document.getElementById('${id}').remove();calcPCCRow()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px;">✕</button>`;
+    container.appendChild(div);
+  });
+  calcPCCRow();
+  openModal('m-pc-compra');
+}
+
+function calcPCCRow(){
+  let total=0;
+  document.querySelectorAll('#pcc-rows .prod-row').forEach(r=>{
+    const cant=parseFloat(r.querySelector('.pcant')?.value)||0;
+    const prec=parseFloat(r.querySelector('.pprec')?.value)||0;
+    r.querySelector('.psub').textContent=fmt(cant*prec);
+    total+=cant*prec;
+  });
+  document.getElementById('t-pcc').textContent=fmt(total);
+}
+
+async function savePCCompra(){
+  const provId=document.getElementById('pcc-prov').value;
+  if(!provId){ toast('Selecciona un proveedor','err'); return; }
+  const rows=[...document.querySelectorAll('#pcc-rows .prod-row')];
+  const detalles=rows.map(r=>({
+    producto_id:r.querySelector('.psel').value,
+    cantidad:parseFloat(r.querySelector('.pcant').value)||0,
+    costo_unitario:parseFloat(r.querySelector('.pprec').value)||0
+  })).filter(d=>d.producto_id&&d.cantidad>0);
+  if(!detalles.length){ toast('Agrega productos','err'); return; }
+  const total=detalles.reduce((s,d)=>s+d.cantidad*d.costo_unitario,0);
+  try{
+    const cId=uid();
+    await api('compras','POST',{
+      id:cId, proveedor_id:provId,
+      fecha:document.getElementById('pcc-fecha').value,
+      numero_pedido:document.getElementById('pcc-num').value,
+      notas:document.getElementById('pcc-notas').value||'Generado desde Lista de Compras',
+      total
+    });
+    for(const d of detalles){
+      await api('detalle_compras','POST',{id:uid(),compra_id:cId,...d});
+      const prod=productos.find(p=>p.id===d.producto_id);
+      if(prod) await api('productos','PATCH',{stock:(prod.stock||0)+d.cantidad},`?id=eq.${d.producto_id}`);
+    }
+    // Marcar como completados los items que estaban en la lista
+    const pendientes=listaPC.filter(x=>!x.completado);
+    for(const item of pendientes){
+      if(detalles.find(d=>d.producto_id===item.producto_id)){
+        await api('lista_compras','PATCH',{completado:true},`?id=eq.${item.id}`);
+      }
+    }
+    closeModal('m-pc-compra');
+    toast('Compra creada y lista actualizada ✓','ok');
+    loadProximas(); preloadAll();
+  }catch(e){ toast(e.message,'err'); }
+}
 </script>
 </body>
 </html>
