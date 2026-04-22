@@ -1209,7 +1209,7 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
       <!-- Tabs -->
       <div class="tabs">
         <button class="tab active" id="tab-lista" onclick="switchPCTab('lista')">📋 Mi Lista</button>
-        <button class="tab" id="tab-sugeridos" onclick="switchPCTab('sugeridos')">🤖 Sugeridos por ventas</button>
+        <button class="tab" id="tab-sugeridos" onclick="switchPCTab('sugeridos')">⚠️ Stock bajo</button>
       </div>
 
       <!-- Tab Lista -->
@@ -1237,26 +1237,15 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
 
       <!-- Tab Sugeridos -->
       <div id="pc-tab-sugeridos" style="display:none;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">⚠️ Stock bajo (requieren reposición)</span>
-            </div>
-            <div style="padding:14px 16px;" id="sug-stock-bajo"></div>
-          </div>
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">🔥 Más vendidos últimos 30 días</span>
-            </div>
-            <div style="padding:14px 16px;" id="sug-mas-vendidos"></div>
-          </div>
-        </div>
-        <div class="card" style="margin-top:16px;">
+        <div class="card">
           <div class="card-header">
-            <span class="card-title">🤖 Pedido sugerido inteligente</span>
-            <button class="btn btn-sm btn-rose" onclick="agregarTodosSugeridos()">+ Agregar todos a mi lista</button>
+            <span class="card-title">⚠️ Productos con stock bajo</span>
+            <button class="btn btn-sm btn-rose" id="btn-agregar-todos-stock" onclick="agregarTodosStockBajo()" style="display:none;">+ Agregar todos a la lista</button>
           </div>
-          <div style="padding:14px 16px;" id="sug-pedido-inteligente"></div>
+          <div style="padding:6px 16px 4px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--mist);">
+            Estos productos están por debajo del stock mínimo. Toca <strong>+ Lista</strong> para agregarlos a tu próxima compra.
+          </div>
+          <div style="padding:14px 16px;" id="sug-stock-bajo"></div>
         </div>
       </div>
     </div>
@@ -3076,87 +3065,46 @@ async function limpiarCompletados(){
   toast(`${completados.length} eliminados`,'ok'); loadProximas();
 }
 
-// ===== SUGERIDOS INTELIGENTES =====
-let _sugeridosData = [];
-
+// ===== SUGERIDOS — STOCK BAJO =====
 async function loadSugeridos(){
   if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
 
-  // Stock bajo
-  const stockBajo = productos.filter(p=>(p.stock||0)<=(p.stock_minimo||5)).sort((a,b)=>a.stock-b.stock);
-  const elStock = document.getElementById('sug-stock-bajo');
-  elStock.innerHTML = stockBajo.length ? stockBajo.map(p=>`
-    <div class="sugerido-item">
-      <div class="si-info">
-        <div class="si-nombre">${p.descripcion}</div>
-        <div class="si-meta">Stock: <strong style="color:var(--amber)">${p.stock||0}</strong> / Mín: ${p.stock_minimo||5} ${p.unidad||'und'}</div>
-      </div>
-      <button class="btn btn-xs btn-rose" onclick="agregarSugerido('${p.id}','alta',${Math.max(1,(p.stock_minimo||5)*2-(p.stock||0))})">+ Lista</button>
-    </div>`) .join('') : '<div class="empty"><p>🎉 Todo con stock suficiente</p></div>';
+  const stockBajo = productos
+    .filter(p => (p.stock||0) <= (p.stock_minimo||5))
+    .sort((a,b) => (a.stock||0) - (b.stock||0));
 
-  // Más vendidos últimos 30 días
-  const hace30 = new Date(); hace30.setDate(hace30.getDate()-30);
-  const desde30 = hace30.toISOString().split('T')[0];
-  const ventasRec = await api('ventas','GET',null,`?fecha=gte.${desde30}&select=id`);
-  const vIds = ventasRec.map(v=>v.id);
-  let detallesRec = [];
-  if(vIds.length){
-    detallesRec = await api('detalle_ventas','GET',null,`?limit=2000`);
-    detallesRec = detallesRec.filter(d=>vIds.includes(d.venta_id));
+  const yaEnLista = new Set(listaPC.filter(x=>!x.completado).map(x=>x.producto_id));
+  const sinAgregar = stockBajo.filter(p => !yaEnLista.has(p.id));
+
+  // Mostrar/ocultar botón "agregar todos"
+  document.getElementById('btn-agregar-todos-stock').style.display =
+    sinAgregar.length > 1 ? 'inline-flex' : 'none';
+
+  const el = document.getElementById('sug-stock-bajo');
+
+  if(!stockBajo.length){
+    el.innerHTML = '<div class="empty"><p>🎉 Todo con stock suficiente</p></div>';
+    return;
   }
 
-  const conteo = {};
-  detallesRec.forEach(d=>{
-    if(!conteo[d.producto_id]) conteo[d.producto_id]={cant:0,total:0};
-    conteo[d.producto_id].cant += d.cantidad;
-    conteo[d.producto_id].total += d.cantidad*d.precio_unitario;
-  });
-  const topVendidos = Object.entries(conteo).sort((a,b)=>b[1].cant-a[1].cant).slice(0,10);
-
-  const elVendidos = document.getElementById('sug-mas-vendidos');
-  elVendidos.innerHTML = topVendidos.length ? topVendidos.map(([pid,d])=>{
-    const p = productos.find(x=>x.id===pid);
-    return `<div class="sugerido-item">
+  el.innerHTML = stockBajo.map(p => {
+    const yaEsta = yaEnLista.has(p.id);
+    const cantSug = Math.max(1, (p.stock_minimo||5) * 2 - (p.stock||0));
+    return `<div class="sugerido-item" style="${yaEsta?'opacity:.5':''}">
       <div class="si-info">
-        <div class="si-nombre">${p?.descripcion||'—'}</div>
-        <div class="si-meta">Vendidos: <strong>${d.cant}</strong> und · Stock: <strong>${p?.stock||0}</strong></div>
+        <div class="si-nombre">${p.descripcion}</div>
+        <div class="si-meta">
+          Stock actual: <strong style="color:var(--amber)">${p.stock||0}</strong> ${p.unidad||'und'}
+          &nbsp;·&nbsp; Mínimo: <strong>${p.stock_minimo||5}</strong>
+          &nbsp;·&nbsp; Sugerido pedir: <strong>${cantSug}</strong>
+        </div>
       </div>
-      <button class="btn btn-xs btn-rose" onclick="agregarSugerido('${pid}','media',${Math.ceil(d.cant/4)})">+ Lista</button>
+      ${yaEsta
+        ? `<span class="badge b-green">✅ En lista</span>`
+        : `<button class="btn btn-xs btn-rose" onclick="agregarSugerido('${p.id}','alta',${cantSug})">+ Lista</button>`
+      }
     </div>`;
-  }).join('') : '<div class="empty"><p>Sin datos de ventas recientes</p></div>';
-
-  // Pedido inteligente: combina stock bajo + más vendidos sin duplicar
-  const yaEnLista = new Set(listaPC.filter(x=>!x.completado).map(x=>x.producto_id));
-  const pedidoMap = {};
-
-  stockBajo.forEach(p=>{
-    if(!pedidoMap[p.id]) pedidoMap[p.id]={prod:p, prioridad:'alta', cantSug: Math.max(1,(p.stock_minimo||5)*2-(p.stock||0)), razon:'Stock bajo'};
-  });
-  topVendidos.forEach(([pid,d])=>{
-    const p = productos.find(x=>x.id===pid);
-    if(!p) return;
-    if(pedidoMap[pid]) pedidoMap[pid].razon += ' + Muy vendido';
-    else pedidoMap[pid]={prod:p, prioridad:'media', cantSug:Math.ceil(d.cant/2), razon:'Muy vendido'};
-  });
-
-  _sugeridosData = Object.values(pedidoMap);
-  const elPedido = document.getElementById('sug-pedido-inteligente');
-  const sinLista = _sugeridosData.filter(x=>!yaEnLista.has(x.prod.id));
-
-  elPedido.innerHTML = sinLista.length ? `
-    <div style="font-size:12px;color:var(--ink-soft);margin-bottom:12px;">
-      ${sinLista.length} producto(s) sugeridos basados en stock actual y tendencia de ventas de los últimos 30 días.
-    </div>
-    <table><thead><tr><th>Producto</th><th>Stock</th><th>Cant. sugerida</th><th>Motivo</th><th>Prioridad</th><th></th></tr></thead>
-    <tbody>${sinLista.map(x=>`<tr>
-      <td class="fw7">${x.prod.descripcion}</td>
-      <td class="${(x.prod.stock||0)<=(x.prod.stock_minimo||5)?'c-amber fw7':''}">${x.prod.stock||0} ${x.prod.unidad||'und'}</td>
-      <td class="fw7">${x.cantSug}</td>
-      <td style="font-size:12px;color:var(--ink-soft);">${x.razon}</td>
-      <td><span class="pr-badge ${x.prioridad==='alta'?'pr-alta':'pr-media'}">${x.prioridad==='alta'?'🔴 Alta':'🟡 Media'}</span></td>
-      <td><button class="btn btn-xs btn-rose" onclick="agregarSugerido('${x.prod.id}','${x.prioridad}',${x.cantSug})">+ Lista</button></td>
-    </tr>`).join('')}</tbody></table>` :
-    '<div class="empty"><p>✅ Todos los sugeridos ya están en tu lista</p></div>';
+  }).join('');
 }
 
 async function agregarSugerido(prodId, prioridad, cant){
@@ -3173,14 +3121,16 @@ async function agregarSugerido(prodId, prioridad, cant){
   }catch(e){ toast(e.message,'err'); }
 }
 
-async function agregarTodosSugeridos(){
+async function agregarTodosStockBajo(){
+  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
   const yaEnLista = new Set(listaPC.filter(x=>!x.completado).map(x=>x.producto_id));
-  const nuevos = _sugeridosData.filter(x=>!yaEnLista.has(x.prod.id));
-  if(!nuevos.length){ toast('Todos ya están en tu lista','err'); return; }
-  for(const x of nuevos){
-    await api('lista_compras','POST',{id:uid(),producto_id:x.prod.id,prioridad:x.prioridad,cantidad_sugerida:x.cantSug,completado:false,nota:null});
+  const stockBajo = productos.filter(p => (p.stock||0)<=(p.stock_minimo||5) && !yaEnLista.has(p.id));
+  if(!stockBajo.length){ toast('Todos ya están en tu lista','err'); return; }
+  for(const p of stockBajo){
+    const cantSug = Math.max(1,(p.stock_minimo||5)*2-(p.stock||0));
+    await api('lista_compras','POST',{id:uid(),producto_id:p.id,prioridad:'alta',cantidad_sugerida:cantSug,completado:false,nota:null});
   }
-  toast(`${nuevos.length} productos agregados ✓`,'ok');
+  toast(`${stockBajo.length} productos agregados ✓`,'ok');
   await loadProximas();
   loadSugeridos();
 }
