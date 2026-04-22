@@ -2183,7 +2183,7 @@ function addProdRow(prodData=null){
         value="${prodData ? prodData.descripcion : ''}"
         oninput="filterAC('${id}','venta')"
         onfocus="openAC('${id}')"
-        onblur="setTimeout(()=>closeAC('${id}'),180)">
+        onblur="setTimeout(()=>closeAC('${id}'),300)">
       <div class="prod-ac-dropdown" id="ac-${id}"></div>
     </div>
     <input type="number" class="pcant" value="1" min="1" oninput="calcRow('${id}')">
@@ -2488,7 +2488,7 @@ function addCompraRow(prodData=null){
         value="${prodData ? prodData.descripcion : ''}"
         oninput="filterAC('${id}','compra')"
         onfocus="openAC('${id}')"
-        onblur="setTimeout(()=>closeAC('${id}'),180)">
+        onblur="setTimeout(()=>closeAC('${id}'),300)">
       <div class="prod-ac-dropdown" id="ac-${id}"></div>
     </div>
     <input type="number" class="pcant" value="1" min="1" oninput="calcCRow('${id}')">
@@ -2579,7 +2579,7 @@ function addEditCompraRow(d=null){
         value="${prod ? prod.descripcion : ''}"
         oninput="filterAC('${id}','compra')"
         onfocus="openAC('${id}')"
-        onblur="setTimeout(()=>closeAC('${id}'),180)">
+        onblur="setTimeout(()=>closeAC('${id}'),300)">
       <div class="prod-ac-dropdown" id="ac-${id}"></div>
     </div>
     <input type="number" class="pcant" value="${d?d.cantidad:1}" min="1" oninput="calcECRow()">
@@ -3337,11 +3337,15 @@ async function savePCCompra(){
 </html>
 <script>
 // ===== AUTOCOMPLETE PRODUCTOS =====
+// ===== AUTOCOMPLETE PRODUCTOS =====
+let _acTipo = {}; // guarda el tipo por rowId
+
 function openAC(rowId){
   const row = document.getElementById(rowId);
   if(!row) return;
+  const tipo = _acTipo[rowId] || 'venta';
   const q = row.querySelector('.psel-txt')?.value || '';
-  renderAC(rowId, q);
+  renderAC(rowId, q, tipo);
   document.getElementById(`ac-${rowId}`)?.classList.add('open');
 }
 
@@ -3350,6 +3354,7 @@ function closeAC(rowId){
 }
 
 function filterAC(rowId, tipo){
+  _acTipo[rowId] = tipo;
   const row = document.getElementById(rowId);
   if(!row) return;
   const q = row.querySelector('.psel-txt').value.toLowerCase();
@@ -3372,7 +3377,9 @@ function renderAC(rowId, q='', tipo='venta'){
   dropdown.innerHTML = lista.map(p => {
     const precio = tipo === 'compra' ? fmt(p.costo||0) : fmt(p.precio_venta||0);
     const label = tipo === 'compra' ? 'Costo' : 'Precio';
-    return `<div class="prod-ac-item" onmousedown="seleccionarAC('${rowId}','${p.id}','${tipo}')">
+    // onmousedown previene que el blur cierre el dropdown antes del click
+    return `<div class="prod-ac-item"
+      onmousedown="event.preventDefault(); seleccionarAC('${rowId}','${p.id}','${tipo}')">
       <span>${p.descripcion}</span>
       <span class="ac-precio">${label}: ${precio}</span>
     </div>`;
@@ -3397,6 +3404,8 @@ function seleccionarAC(rowId, prodId, tipo){
   } else {
     calcRow(rowId);
   }
+  // Poner foco en cantidad
+  row.querySelector('.pcant')?.focus();
 }
 
 // ===== BOTTOM NAV =====
