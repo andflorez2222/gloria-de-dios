@@ -539,6 +539,33 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;}
 .full{grid-column:1/-1;}
 
+/* AUTOCOMPLETE PRODUCTOS */
+.prod-autocomplete{position:relative;}
+.prod-autocomplete input{
+  width:100%;padding:6px 8px;font-size:12.5px;
+  border:1.5px solid var(--mist-mid);border-radius:6px;
+  font-family:'Plus Jakarta Sans',sans-serif;color:var(--ink);outline:none;
+  background:var(--white);
+}
+.prod-autocomplete input:focus{border-color:var(--rose);}
+.prod-ac-dropdown{
+  position:absolute;top:100%;left:0;right:0;
+  background:var(--white);border:1.5px solid var(--mist-mid);
+  border-radius:6px;box-shadow:var(--sh-lg);
+  max-height:220px;overflow-y:auto;
+  z-index:500;display:none;margin-top:2px;
+}
+.prod-ac-dropdown.open{display:block;}
+.prod-ac-item{
+  padding:8px 12px;font-size:12.5px;cursor:pointer;
+  border-bottom:1px solid var(--mist);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.prod-ac-item:last-child{border-bottom:none;}
+.prod-ac-item:hover,.prod-ac-item.selected{background:var(--rose-pale);}
+.prod-ac-item .ac-precio{font-size:11px;color:var(--mist-dark);}
+.prod-ac-empty{padding:10px 12px;font-size:12px;color:var(--mist-dark);text-align:center;}
+
 /* PRODUCTOS EN VENTA */
 .prod-section{
   border:1.5px solid var(--mist-mid);
@@ -2144,28 +2171,27 @@ async function openVentaModal(){
   openModal('m-venta');
 }
 
-function addProdRow(){
+function addProdRow(prodData=null){
   rowIdx++;
   const id = `pr-${rowIdx}`;
   const div = document.createElement('div');
   div.className='prod-row'; div.id=id;
+  div.dataset.prodId = prodData?.id || '';
   div.innerHTML=`
-    <select class="psel" onchange="onProdSelect('${id}')">
-      <option value="">Seleccionar...</option>
-      ${productos.map(p=>`<option value="${p.id}" data-precio="${p.precio_venta}">${p.descripcion}</option>`).join('')}
-    </select>
+    <div class="prod-autocomplete">
+      <input type="text" class="psel-txt" placeholder="Buscar producto..." autocomplete="off"
+        value="${prodData ? prodData.descripcion : ''}"
+        oninput="filterAC('${id}','venta')"
+        onfocus="openAC('${id}')"
+        onblur="setTimeout(()=>closeAC('${id}'),180)">
+      <div class="prod-ac-dropdown" id="ac-${id}"></div>
+    </div>
     <input type="number" class="pcant" value="1" min="1" oninput="calcRow('${id}')">
-    <input type="number" class="pprec" value="0" min="0" oninput="calcRow('${id}')">
+    <input type="number" class="pprec" value="${prodData ? (prodData.precio_venta||0) : 0}" min="0" oninput="calcRow('${id}')">
     <span class="prod-sub-lbl psub">$0</span>
     <button onclick="removeRow('${id}')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px;">✕</button>`;
   document.getElementById('prod-rows').appendChild(div);
-}
-
-function onProdSelect(id){
-  const row = document.getElementById(id);
-  const opt = row.querySelector('.psel').selectedOptions[0];
-  row.querySelector('.pprec').value = opt?.dataset.precio || 0;
-  calcRow(id);
+  if(prodData) calcRow(id);
 }
 
 function calcRow(id){
@@ -2193,7 +2219,7 @@ async function saveVenta(){
 
   const rows = [...document.querySelectorAll('#prod-rows .prod-row')];
   const detalles = rows.map(r=>({
-    producto_id: r.querySelector('.psel').value,
+    producto_id: r.dataset.prodId||'',
     cantidad: parseFloat(r.querySelector('.pcant').value)||0,
     precio_unitario: parseFloat(r.querySelector('.pprec').value)||0
   })).filter(d=>d.producto_id && d.cantidad>0);
@@ -2450,28 +2476,27 @@ async function openCompraModal(){
   openModal('m-compra');
 }
 
-function addCompraRow(){
+function addCompraRow(prodData=null){
   rowIdx++;
   const id = `cr-${rowIdx}`;
   const div = document.createElement('div');
   div.className='prod-row'; div.id=id;
+  div.dataset.prodId = prodData?.id || '';
   div.innerHTML=`
-    <select class="psel" onchange="onCostSelect('${id}')">
-      <option value="">Seleccionar...</option>
-      ${productos.map(p=>`<option value="${p.id}" data-costo="${p.costo}">${p.descripcion}</option>`).join('')}
-    </select>
+    <div class="prod-autocomplete">
+      <input type="text" class="psel-txt" placeholder="Buscar producto..." autocomplete="off"
+        value="${prodData ? prodData.descripcion : ''}"
+        oninput="filterAC('${id}','compra')"
+        onfocus="openAC('${id}')"
+        onblur="setTimeout(()=>closeAC('${id}'),180)">
+      <div class="prod-ac-dropdown" id="ac-${id}"></div>
+    </div>
     <input type="number" class="pcant" value="1" min="1" oninput="calcCRow('${id}')">
-    <input type="number" class="pprec" value="0" min="0" oninput="calcCRow('${id}')">
+    <input type="number" class="pprec" value="${prodData ? (prodData.costo||0) : 0}" min="0" oninput="calcCRow('${id}')">
     <span class="prod-sub-lbl psub">$0</span>
     <button onclick="removeCRow('${id}')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px;">✕</button>`;
   document.getElementById('compra-rows').appendChild(div);
-}
-
-function onCostSelect(id){
-  const row = document.getElementById(id);
-  const opt = row.querySelector('.psel').selectedOptions[0];
-  row.querySelector('.pprec').value = opt?.dataset.costo||0;
-  calcCRow(id);
+  if(prodData) calcCRow(id);
 }
 
 function calcCRow(id){
@@ -2493,7 +2518,7 @@ async function saveCompra(){
   if(!provId){ toast('Selecciona un proveedor','err'); return; }
   const rows = [...document.querySelectorAll('#compra-rows .prod-row')];
   const detalles = rows.map(r=>({
-    producto_id:r.querySelector('.psel').value,
+    producto_id:r.dataset.prodId||'',
     cantidad:parseFloat(r.querySelector('.pcant').value)||0,
     costo_unitario:parseFloat(r.querySelector('.pprec').value)||0
   })).filter(d=>d.producto_id&&d.cantidad>0);
@@ -2544,13 +2569,19 @@ async function editCompra(id){
 function addEditCompraRow(d=null){
   rowIdx++;
   const id=`ecr-${rowIdx}`;
+  const prod = d ? productos.find(x=>x.id===d.producto_id) : null;
   const div=document.createElement('div');
   div.className='prod-row'; div.id=id;
+  div.dataset.prodId = prod?.id || '';
   div.innerHTML=`
-    <select class="psel" onchange="calcECRow()">
-      <option value="">Seleccionar...</option>
-      ${productos.map(p=>`<option value="${p.id}" data-costo="${p.costo}" ${d&&d.producto_id===p.id?'selected':''}>${p.descripcion}</option>`).join('')}
-    </select>
+    <div class="prod-autocomplete">
+      <input type="text" class="psel-txt" placeholder="Buscar producto..." autocomplete="off"
+        value="${prod ? prod.descripcion : ''}"
+        oninput="filterAC('${id}','compra')"
+        onfocus="openAC('${id}')"
+        onblur="setTimeout(()=>closeAC('${id}'),180)">
+      <div class="prod-ac-dropdown" id="ac-${id}"></div>
+    </div>
     <input type="number" class="pcant" value="${d?d.cantidad:1}" min="1" oninput="calcECRow()">
     <input type="number" class="pprec" value="${d?d.costo_unitario:0}" min="0" oninput="calcECRow()">
     <span class="prod-sub-lbl psub">${d?fmt(d.cantidad*d.costo_unitario):'$0'}</span>
@@ -2575,7 +2606,7 @@ async function saveEditCompra(){
   if(!provId){ toast('Selecciona un proveedor','err'); return; }
   const rows=[...document.querySelectorAll('#ec-rows .prod-row')];
   const detalles=rows.map(r=>({
-    producto_id:r.querySelector('.psel').value,
+    producto_id:r.dataset.prodId||'',
     cantidad:parseFloat(r.querySelector('.pcant').value)||0,
     costo_unitario:parseFloat(r.querySelector('.pprec').value)||0
   })).filter(d=>d.producto_id&&d.cantidad>0);
@@ -3258,7 +3289,7 @@ function calcPCCRow(){
   document.querySelectorAll('#pcc-rows .prod-row').forEach(r=>{
     const cant=parseFloat(r.querySelector('.pcant')?.value)||0;
     const prec=parseFloat(r.querySelector('.pprec')?.value)||0;
-    r.querySelector('.psub').textContent=fmt(cant*prec);
+    if(r.querySelector('.psub')) r.querySelector('.psub').textContent=fmt(cant*prec);
     total+=cant*prec;
   });
   document.getElementById('t-pcc').textContent=fmt(total);
@@ -3305,6 +3336,69 @@ async function savePCCompra(){
 </body>
 </html>
 <script>
+// ===== AUTOCOMPLETE PRODUCTOS =====
+function openAC(rowId){
+  const row = document.getElementById(rowId);
+  if(!row) return;
+  const q = row.querySelector('.psel-txt')?.value || '';
+  renderAC(rowId, q);
+  document.getElementById(`ac-${rowId}`)?.classList.add('open');
+}
+
+function closeAC(rowId){
+  document.getElementById(`ac-${rowId}`)?.classList.remove('open');
+}
+
+function filterAC(rowId, tipo){
+  const row = document.getElementById(rowId);
+  if(!row) return;
+  const q = row.querySelector('.psel-txt').value.toLowerCase();
+  renderAC(rowId, q, tipo);
+  document.getElementById(`ac-${rowId}`)?.classList.add('open');
+}
+
+function renderAC(rowId, q='', tipo='venta'){
+  const dropdown = document.getElementById(`ac-${rowId}`);
+  if(!dropdown) return;
+  const lista = q
+    ? productos.filter(p => p.descripcion.toLowerCase().includes(q))
+    : [...productos];
+
+  if(!lista.length){
+    dropdown.innerHTML = `<div class="prod-ac-empty">Sin resultados para "${q}"</div>`;
+    return;
+  }
+
+  dropdown.innerHTML = lista.map(p => {
+    const precio = tipo === 'compra' ? fmt(p.costo||0) : fmt(p.precio_venta||0);
+    const label = tipo === 'compra' ? 'Costo' : 'Precio';
+    return `<div class="prod-ac-item" onmousedown="seleccionarAC('${rowId}','${p.id}','${tipo}')">
+      <span>${p.descripcion}</span>
+      <span class="ac-precio">${label}: ${precio}</span>
+    </div>`;
+  }).join('');
+}
+
+function seleccionarAC(rowId, prodId, tipo){
+  const row = document.getElementById(rowId);
+  if(!row) return;
+  const prod = productos.find(x=>x.id===prodId);
+  if(!prod) return;
+
+  row.dataset.prodId = prodId;
+  row.querySelector('.psel-txt').value = prod.descripcion;
+  row.querySelector('.pprec').value = tipo === 'compra' ? (prod.costo||0) : (prod.precio_venta||0);
+  closeAC(rowId);
+
+  // Recalcular
+  if(tipo === 'compra'){
+    if(row.closest('#compra-rows')) calcCRow(rowId);
+    else if(row.closest('#ec-rows')) calcECRow();
+  } else {
+    calcRow(rowId);
+  }
+}
+
 // ===== BOTTOM NAV =====
 function setActiveNav(name){
   document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
