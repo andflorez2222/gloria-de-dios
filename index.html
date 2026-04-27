@@ -2462,6 +2462,201 @@ async function saveVenta(){
   }catch(e){ toast(e.message,'err'); }
 }
 
+// ===== CARTERA =====
+async function loadCartera(){
+  const el = document.getElementById('cartera-list');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Cargando...</div>';
+  if(!clientes.length || !ventas.length){
+    [clientes, ventas] = await Promise.all([
+      clientes.length ? Promise.resolve(clientes) : api('clientes','GET',null,'?order=nombre'),
+      ventas.length ? Promise.resolve(ventas) : api('ventas','GET',null,'?order=numero_factura.desc')
+    ]);
+  }
+  const deudas = ventas.filter(v=>(v.saldo_pendiente||0)>0)
+    .sort((a,b)=>(b.saldo_pendiente||0)-(a.saldo_pendiente||0));
+  if(!deudas.length){ el.innerHTML='<div class="empty"><div class="e-ico">🎉</div><p>Sin cartera pendiente</p></div>'; cacheSet('cartera'); return; }
+  el.innerHTML=`<table><thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Abonado</th><th>Saldo</th><th>Días</th><th></th></tr></thead>
+  <tbody>${deudas.map(v=>{
+    const c=clientes.find(x=>x.id===v.cliente_id);
+    const abonado=(v.total_venta||0)-(v.saldo_pendiente||0);
+    const dias=Math.floor((new Date()-new Date(v.fecha))/(86400000));
+    return `<tr>
+      <td class="fw7 c-rose">#${v.numero_factura}</td>
+      <td>${v.fecha}</td>
+      <td class="fw7">${c?.nombre||'—'}</td>
+      <td>${fmt(v.total_venta)}</td>
+      <td class="c-green">${fmt(abonado)}</td>
+      <td class="c-amber fw7">${fmt(v.saldo_pendiente)}</td>
+      <td><span class="badge ${dias>30?'b-rose':dias>7?'b-amber':'b-mist'}">${dias}d</span></td>
+      <td><button class="btn btn-xs btn-ghost" onclick="openAbonoModal('${v.id}')">💰 Abonar</button>
+          <button class="btn btn-xs btn-ghost" onclick="quickWA('${v.id}')">📱</button></td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+  cacheSet('cartera');
+}
+
+// ===== ABONOS =====
+async function loadAbonos(){
+  const el = document.getElementById('abonos-list');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Cargando...</div>';
+  const [abonosData, ventasData] = await Promise.all([
+    api('abonos','GET',null,'?order=fecha.desc'),
+    ventas.length ? Promise.resolve(ventas) : api('ventas','GET',null,'?order=numero_factura.desc')
+  ]);
+  abonos = abonosData;
+  if(!ventas.length) ventas = ventasData;
+  if(!clientes.length) clientes = await api('clientes','GET',null,'?order=nombre');
+  if(!abonos.length){ el.innerHTML='<div class="empty"><div class="e-ico">💰</div><p>Sin abonos registrados</p></div>'; cacheSet('abonos'); return; }
+  el.innerHTML=`<table><thead><tr><th>Fecha</th><th>Factura</th><th>Cliente</th><th>Monto</th><th>Método</th></tr></thead>
+  <tbody>${abonos.map(a=>{
+    const v=ventas.find(x=>x.id===a.venta_id);
+    const c=clientes.find(x=>x.id===v?.cliente_id);
+    return `<tr>
+      <td>${a.fecha}</td>
+      <td class="fw7 c-rose">${v?'#'+v.numero_factura:'—'}</td>
+      <td>${c?.nombre||'—'}</td>
+      <td class="fw7 c-green">${fmt(a.monto)}</td>
+      <td>${a.metodo_pago||'—'}</td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+  cacheSet('abonos');
+}
+
+// ===== COMPRAS =====
+let compras = [];
+async function loadCompras(){
+  const el = document.getElementById('compras-list');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Cargando...</div>';
+  [compras, proveedores] = await Promise.all([
+    api('compras','GET',null,'?order=fecha.desc'),
+    proveedores.length ? Promise.resolve(proveedores) : api('proveedores','GET',null,'?order=nombre')
+  ]);
+  renderCompras(compras);
+  cacheSet('compras');
+}
+
+function renderCompras(data){
+  const el = document.getElementById('compras-list');
+  if(!data.length){ el.innerHTML='<div class="empty"><div class="e-ico">🛒</div><p>Sin compras registradas</p></div>'; return; }
+  el.innerHTML=`<table><thead><tr><th>Fecha</th><th>Proveedor</th><th>Pedido</th><th>Total</th><th>Notas</th><th></th></tr></thead>
+  <tbody>${data.map(c=>{
+    const p=proveedores.find(x=>x.id===c.proveedor_id);
+    return `<tr>
+      <td>${c.fecha||'—'}</td>
+      <td class="fw7">${p?.nombre||'—'}</td>
+      <td><span class="badge b-mist">${c.numero_pedido||'—'}</span></td>
+      <td class="fw7 c-rose">${fmt(c.total||0)}</td>
+      <td style="font-size:12px;color:var(--ink-soft);">${c.notas||'—'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-xs btn-ghost" onclick="viewFacturaCompra('${c.id}')">🧾 Factura</button>
+        <button class="btn btn-xs btn-ghost" onclick="editCompra('${c.id}')" style="color:#dc2626;">✏️</button>
+      </td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+// ===== PRODUCTOS =====
+async function loadProductos(){
+  const el = document.getElementById('productos-list');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Cargando...</div>';
+  productos = await api('productos','GET',null,'?order=descripcion');
+  renderProductos(productos);
+  // Alerta stock bajo
+  const bajos = productos.filter(p=>(p.stock||0)<=(p.stock_minimo||5));
+  const alertEl = document.getElementById('low-stock-alert');
+  const msgEl = document.getElementById('low-stock-msg');
+  if(alertEl && bajos.length){
+    alertEl.style.display='';
+    if(msgEl) msgEl.textContent=`${bajos.length} producto${bajos.length>1?'s':''} con stock bajo`;
+  } else if(alertEl){ alertEl.style.display='none'; }
+  cacheSet('productos');
+}
+
+function renderProductos(data){
+  const el = document.getElementById('productos-list');
+  if(!data.length){ el.innerHTML='<div class="empty"><div class="e-ico">📦</div><p>Sin productos</p></div>'; return; }
+  el.innerHTML=`<table><thead><tr><th>Producto</th><th>Unidad</th><th>Costo</th><th>Precio</th><th>Stock</th><th>Mínimo</th><th></th></tr></thead>
+  <tbody>${data.map(p=>{
+    const stockOk=(p.stock||0)>(p.stock_minimo||5);
+    const stockBadge=stockOk
+      ?`<span class="badge b-green">${p.stock||0}</span>`
+      :(p.stock||0)>0
+        ?`<span class="badge b-amber">${p.stock||0}</span>`
+        :`<span class="badge b-rose">0</span>`;
+    return `<tr>
+      <td class="fw7">${p.descripcion}</td>
+      <td>${p.unidad||'und'}</td>
+      <td>${fmt(p.costo||0)}</td>
+      <td class="fw7 c-green">${fmt(p.precio_venta||0)}</td>
+      <td>${stockBadge}</td>
+      <td style="color:var(--ink-soft);">${p.stock_minimo||5}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-xs btn-ghost" onclick="editProducto('${p.id}')">✏️</button>
+        <button class="btn btn-xs btn-ghost" onclick="delProducto('${p.id}')" style="color:#dc2626;">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+// ===== PROVEEDORES =====
+async function loadProveedores(){
+  const el = document.getElementById('proveedores-list');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Cargando...</div>';
+  proveedores = await api('proveedores','GET',null,'?order=nombre');
+  renderProveedores(proveedores);
+  cacheSet('proveedores');
+}
+
+function renderProveedores(data){
+  const el = document.getElementById('proveedores-list');
+  if(!data.length){ el.innerHTML='<div class="empty"><div class="e-ico">🏭</div><p>Sin proveedores</p></div>'; return; }
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>Teléfono / WhatsApp</th><th>Dirección</th><th>Notas</th><th></th></tr></thead>
+  <tbody>${data.map(p=>`<tr>
+    <td class="fw7">${p.nombre}</td>
+    <td>${p.telefono||p.whatsapp||'—'}</td>
+    <td style="font-size:12px;">${p.direccion||'—'}</td>
+    <td style="font-size:12px;color:var(--ink-soft);">${p.notas||'—'}</td>
+    <td style="white-space:nowrap;">
+      ${p.telefono||p.whatsapp?`<a class="btn btn-xs btn-ghost" href="https://wa.me/57${(p.telefono||p.whatsapp||'').replace(/\D/g,'')}" target="_blank">📱 WA</a>`:''}
+      <button class="btn btn-xs btn-ghost" onclick="editProveedor('${p.id}')">✏️</button>
+      <button class="btn btn-xs btn-ghost" onclick="delProveedor('${p.id}')" style="color:#dc2626;">🗑️</button>
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+// ===== CLIENTES =====
+let _clientesFull = [];
+async function loadClientes(){
+  const el = document.getElementById('clientes-list');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Cargando...</div>';
+  clientes = await api('clientes','GET',null,'?order=nombre');
+  _clientesFull = [...clientes];
+  renderClientes(clientes);
+  cacheSet('clientes');
+}
+
+function renderClientes(data){
+  const el = document.getElementById('clientes-list');
+  if(!data.length){ el.innerHTML='<div class="empty"><div class="e-ico">👥</div><p>Sin clientes</p></div>'; return; }
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Dirección</th><th>Notas</th><th></th></tr></thead>
+  <tbody>${data.map(c=>`<tr>
+    <td class="fw7">${c.nombre}</td>
+    <td>${c.telefono||'—'}</td>
+    <td style="font-size:12px;">${c.direccion||'—'}</td>
+    <td style="font-size:12px;color:var(--ink-soft);">${c.notas||'—'}</td>
+    <td style="white-space:nowrap;">
+      ${c.telefono?`<a class="btn btn-xs btn-ghost" href="https://wa.me/57${c.telefono.replace(/\D/g,'')}" target="_blank">📱</a>`:''}
+      <button class="btn btn-xs btn-ghost" onclick="editCliente('${c.id}')">✏️</button>
+      <button class="btn btn-xs btn-ghost" onclick="delCliente('${c.id}')" style="color:#dc2626;">🗑️</button>
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function filterClientes(){
+  const q=document.getElementById('sc-search')?.value.toLowerCase()||'';
+  renderClientes(_clientesFull.filter(c=>c.nombre?.toLowerCase().includes(q)||c.telefono?.includes(q)));
+}
+
 // ===== FACTURA =====
 async function viewFactura(ventaId){
   if(!clientes.length) clientes = await api('clientes','GET',null,'?order=nombre');
