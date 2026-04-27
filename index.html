@@ -585,7 +585,7 @@ td{padding:10px 16px;font-size:13px;color:var(--ink);}
 
 .prod-row{
   display:grid;
-  grid-template-columns:1fr 75px 110px 95px 32px;
+  grid-template-columns:1fr 130px 75px 110px 95px 32px;
   gap:6px;padding:9px 12px;
   border-top:1px solid var(--mist);
   align-items:center;
@@ -1079,17 +1079,6 @@ tr.drag-over td { background: var(--rose-soft) !important; }
   </div>
 </div>
 
-<!-- ===== SELECTOR DE USUARIO ===== -->
-<div id="user-select-screen" style="display:none;">
-  <div class="us-box">
-    <h2>¡Bienvenido!</h2>
-    <p>¿Quién está usando la app ahora?</p>
-    <div class="us-options" id="us-options">
-      <div class="loading"><div class="spin"></div></div>
-    </div>
-  </div>
-</div>
-
 <!-- ===== APP ===== -->
 <div id="app-screen">
 <div class="layout">
@@ -1114,7 +1103,6 @@ tr.drag-over td { background: var(--rose-soft) !important; }
 
     <div class="nav-sec">Compras</div>
     <div class="ni" onclick="showPage('compras')"><span class="ico">🛒</span><span>Compras</span></div>
-    <div class="ni" onclick="showPage('proximas')"><span class="ico">📋</span><span>Lista de Compras</span></div>
 
     <div class="nav-sec">Inventario</div>
     <div class="ni" onclick="showPage('productos')"><span class="ico">📦</span><span>Productos</span></div>
@@ -1453,51 +1441,6 @@ tr.drag-over td { background: var(--rose-soft) !important; }
       </div>
     </div>
 
-    <!-- PRÓXIMAS COMPRAS -->
-    <div class="page" id="page-proximas">
-      <!-- Tabs -->
-      <div class="tabs">
-        <button class="tab active" id="tab-lista" onclick="switchPCTab('lista')">📋 Mi Lista</button>
-        <button class="tab" id="tab-sugeridos" onclick="switchPCTab('sugeridos')">⚠️ Stock bajo</button>
-      </div>
-
-      <!-- Tab Lista -->
-      <div id="pc-tab-lista">
-        <div class="card" style="margin-bottom:16px;">
-          <div class="card-header">
-            <span class="card-title">Lista de productos a comprar</span>
-            <div class="flex aic g8">
-              <button class="btn btn-sm btn-mist" onclick="limpiarCompletados()">🗑️ Limpiar completados</button>
-              <button class="btn btn-sm btn-green" onclick="convertirListaEnCompra()">🛒 Convertir en Compra</button>
-              <button class="btn btn-sm btn-rose" onclick="openPCModal()">+ Agregar</button>
-            </div>
-          </div>
-          <!-- Filtros -->
-          <div style="padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--mist);">
-            <button class="btn btn-xs btn-mist" onclick="filterPC('todas')" id="pcf-todas" style="background:var(--ink);color:white;">Todas</button>
-            <button class="btn btn-xs btn-ghost" onclick="filterPC('alta')" id="pcf-alta">🔴 Alta prioridad</button>
-            <button class="btn btn-xs btn-ghost" onclick="filterPC('media')" id="pcf-media">🟡 Media</button>
-            <button class="btn btn-xs btn-ghost" onclick="filterPC('baja')" id="pcf-baja">🟢 Baja</button>
-            <button class="btn btn-xs btn-ghost" onclick="filterPC('pendientes')" id="pcf-pendientes">⏳ Pendientes</button>
-          </div>
-          <div id="pc-list"><div class="loading"><div class="spin"></div>Cargando...</div></div>
-        </div>
-      </div>
-
-      <!-- Tab Sugeridos -->
-      <div id="pc-tab-sugeridos" style="display:none;">
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">⚠️ Productos con stock bajo</span>
-            <button class="btn btn-sm btn-rose" id="btn-agregar-todos-stock" onclick="agregarTodosStockBajo()" style="display:none;">+ Agregar todos a la lista</button>
-          </div>
-          <div style="padding:6px 16px 4px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--mist);">
-            Estos productos están por debajo del stock mínimo. Toca <strong>+ Lista</strong> para agregarlos a tu próxima compra.
-          </div>
-          <div style="padding:14px 16px;" id="sug-stock-bajo"></div>
-        </div>
-      </div>
-    </div>
 
   </div><!-- /content -->
 </div><!-- /main-area -->
@@ -1532,7 +1475,6 @@ tr.drag-over td { background: var(--rose-soft) !important; }
     <button class="mm-item" onclick="showPage('clientes');setActiveNav('clientes');closeMoreMenu()"><span class="mico">👥</span>Clientes</button>
     <button class="mm-item" onclick="showPage('abonos');setActiveNav('abonos');closeMoreMenu()"><span class="mico">💰</span>Abonos</button>
     <button class="mm-item" onclick="showPage('compras');setActiveNav('compras');closeMoreMenu()"><span class="mico">🛒</span>Compras</button>
-    <button class="mm-item" onclick="showPage('proximas');setActiveNav('proximas');closeMoreMenu()"><span class="mico">📋</span>Lista Compras</button>
     <button class="mm-item" onclick="showPage('proveedores');setActiveNav('proveedores');closeMoreMenu()"><span class="mico">🏭</span>Proveedores</button>
     <button class="mm-item" onclick="showPage('reportes');setActiveNav('reportes');closeMoreMenu()"><span class="mico">📈</span>Reportes</button>
     <button class="mm-item" onclick="showPage('retiros');setActiveNav('retiros');closeMoreMenu()"><span class="mico">💸</span>Retiros</button>
@@ -1671,14 +1613,18 @@ tr.drag-over td { background: var(--rose-soft) !important; }
           <select id="v-estado"><option>Pendiente</option><option>Pagado</option></select>
         </div>
         <div class="fg full"><label>Notas</label><input type="text" id="v-notas" placeholder="Observaciones..."></div>
+        <div class="fg full"><label>👤 Quién realizó la venta</label>
+          <select id="v-usuario"><option value="">— Sin asignar —</option></select>
+        </div>
       </div>
       <div class="prod-section">
         <div class="prod-section-hdr">
           <span>Detalle de productos</span>
           <button class="btn btn-xs btn-mist" onclick="addProdRow()">+ Agregar producto</button>
         </div>
-        <div style="padding:7px 12px 0;display:grid;grid-template-columns:1fr 75px 110px 95px 32px;gap:6px;">
+        <div style="padding:7px 12px 0;display:grid;grid-template-columns:1fr 130px 75px 110px 95px 32px;gap:6px;">
           <span style="font-size:10px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;">Producto</span>
+          <span style="font-size:10px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;">Lote</span>
           <span style="font-size:10px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;">Cant.</span>
           <span style="font-size:10px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;">Precio</span>
           <span style="font-size:10px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;">Subtotal</span>
@@ -1778,83 +1724,6 @@ tr.drag-over td { background: var(--rose-soft) !important; }
 </div>
 
 <!-- PRÓXIMA COMPRA ITEM -->
-<div class="overlay" id="m-pc">
-  <div class="modal">
-    <div class="mh">
-      <div class="mh-title" id="m-pc-title">Agregar a lista de compras</div>
-      <button class="xbtn" onclick="closeModal('m-pc')">✕</button>
-    </div>
-    <div class="mb">
-      <input type="hidden" id="pc-id">
-      <div class="grid2">
-        <div class="fg full">
-          <label>Producto *</label>
-          <select id="pc-producto">
-            <option value="">Seleccionar producto...</option>
-          </select>
-        </div>
-        <div class="fg">
-          <label>Cantidad sugerida</label>
-          <input type="number" id="pc-cantidad" placeholder="0" min="1">
-        </div>
-        <div class="fg">
-          <label>Prioridad</label>
-          <select id="pc-prioridad">
-            <option value="alta">🔴 Alta</option>
-            <option value="media" selected>🟡 Media</option>
-            <option value="baja">🟢 Baja</option>
-          </select>
-        </div>
-        <div class="fg full">
-          <label>Nota / observación</label>
-          <textarea id="pc-nota" rows="2" placeholder="Ej: pedir al proveedor X, precio máximo $Y, urgente para fin de mes..."></textarea>
-        </div>
-      </div>
-    </div>
-    <div class="mf">
-      <button class="btn btn-ghost" onclick="closeModal('m-pc')">Cancelar</button>
-      <button class="btn btn-rose" onclick="savePC()">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- CONVERTIR LISTA EN COMPRA -->
-<div class="overlay" id="m-pc-compra">
-  <div class="modal modal-lg">
-    <div class="mh">
-      <div class="mh-title">Convertir lista en Compra</div>
-      <button class="xbtn" onclick="closeModal('m-pc-compra')">✕</button>
-    </div>
-    <div class="mb">
-      <div style="background:var(--gold-light);border:1px solid #f0d898;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;">
-        💡 Se creará una compra con los productos <strong>pendientes</strong> de tu lista. Ajusta cantidades y precios antes de guardar.
-      </div>
-      <div class="grid2">
-        <div class="fg">
-          <label>Proveedor *</label>
-          <select id="pcc-prov"><option value="">Seleccionar...</option></select>
-        </div>
-        <div class="fg"><label>Fecha</label><input type="date" id="pcc-fecha"></div>
-        <div class="fg"><label>N° Pedido</label><input type="text" id="pcc-num" placeholder="PED-001"></div>
-        <div class="fg"><label>Notas</label><input type="text" id="pcc-notas"></div>
-      </div>
-      <div class="prod-section">
-        <div class="prod-section-hdr">
-          <span>Productos de la lista</span>
-          <button class="btn btn-xs btn-mist" onclick="addCompraRow()">+ Agregar</button>
-        </div>
-        <div id="pcc-rows"></div>
-      </div>
-      <div class="totales">
-        <div class="tot-row tot-grand"><span>TOTAL COMPRA:</span><span id="t-pcc">$0</span></div>
-      </div>
-    </div>
-    <div class="mf">
-      <button class="btn btn-ghost" onclick="closeModal('m-pc-compra')">Cancelar</button>
-      <button class="btn btn-rose" onclick="savePCCompra()">💾 Crear Compra</button>
-    </div>
-  </div>
-</div>
 
 <!-- EDITAR ABONO -->
 <div class="overlay" id="m-edit-abono">
@@ -1946,6 +1815,13 @@ let currentFactura = null;
 let rowIdx = 0;
 let currentUser = null; // {id, nombre, emoji}
 let usuariosList = []; // cache de usuarios de Supabase
+// Cache timestamps — evita recargas innecesarias
+const _cache = {};
+const CACHE_TTL = 120000; // 2 minutos en ms
+function cacheValid(key){ return _cache[key] && (Date.now()-_cache[key]) < CACHE_TTL; }
+function cacheSet(key){ _cache[key] = Date.now(); }
+function cacheClear(key){ delete _cache[key]; }
+function cacheClearAll(){ Object.keys(_cache).forEach(k=>delete _cache[k]); }
 
 // ===== AUTH =====
 async function doLogin(){
@@ -1970,7 +1846,8 @@ async function doLogin(){
     SESSION = data;
     document.getElementById('sb-email').textContent = email.split('@')[0];
     document.getElementById('login-screen').style.display = 'none';
-    await showUserSelector();
+    document.getElementById('app-screen').style.display = 'block';
+    initApp();
   }catch(e){
     showErr(e.message);
   }finally{
@@ -2050,7 +1927,7 @@ function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 const titles = {
   dashboard:'Dashboard', ventas:'Ventas / Facturas',
   cartera:'Cartera de Cobros', abonos:'Historial de Abonos',
-  compras:'Compras / Pedidos', proximas:'📋 Lista de Próximas Compras',
+  compras:'Compras / Pedidos',
   productos:'Productos & Inventario', stock:'🚦 Stock Inteligente',
   proveedores:'Proveedores', clientes:'Clientes', reportes:'Reportes',
   retiros:'💸 Retiros de Dinero'
@@ -2067,12 +1944,13 @@ function showPage(name){
 
   const loaders = {
     ventas: loadVentas, cartera: loadCartera, abonos: loadAbonos,
-    compras: loadCompras, proximas: loadProximas, productos: loadProductos,
+    compras: loadCompras, productos: loadProductos,
     proveedores: loadProveedores, clientes: loadClientes,
     dashboard: loadDashboard, reportes: initReportes, stock: loadStock,
     retiros: loadRetiros
   };
-  loaders[name]?.();
+  // Solo recargar si no hay cache válido para esta página
+  if(!cacheValid(name)) loaders[name]?.();
 }
 
 // ===== INIT =====
@@ -2082,9 +1960,13 @@ function initApp(){
 }
 
 async function preloadAll(){
-  clientes = await api('clientes','GET',null,'?order=nombre');
-  productos = await api('productos','GET',null,'?order=descripcion');
-  proveedores = await api('proveedores','GET',null,'?order=nombre');
+  // Cargar todo en paralelo — 3x más rápido que en secuencia
+  [clientes, productos, proveedores, usuariosList] = await Promise.all([
+    api('clientes','GET',null,'?order=nombre'),
+    api('productos','GET',null,'?order=descripcion'),
+    api('proveedores','GET',null,'?order=nombre'),
+    api('usuarios','GET',null,'?order=nombre').catch(()=>[])
+  ]);
 }
 
 // ===== DASHBOARD =====
@@ -2111,6 +1993,7 @@ function setDashMesActual(){
 async function loadDashboard(){
   if(!clientes.length) clientes = await api('clientes','GET',null,'?order=nombre');
   if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
+  cacheSet('dashboard');
 
   // Obtener mes seleccionado (default: mes actual)
   const mesInput = document.getElementById('dash-mes');
@@ -2134,10 +2017,13 @@ async function loadDashboard(){
   }
 
   const [allVentas, allAbonos, allCompras] = await Promise.all([
-    api('ventas','GET',null,'?order=numero_factura.desc&limit=200'),
-    api('abonos','GET',null,'?order=fecha.desc'),
+    ventas.length ? Promise.resolve(ventas) : api('ventas','GET',null,'?order=numero_factura.desc&limit=200'),
+    abonos.length ? Promise.resolve(abonos) : api('abonos','GET',null,'?order=fecha.desc'),
     api('compras','GET',null,'?order=fecha.desc&limit=100')
   ]);
+  // Update local cache
+  if(!ventas.length) ventas = allVentas;
+  if(!abonos.length) abonos = allAbonos;
 
   // Filtrar por mes
   let vMesFull = allVentas.filter(v=>v.fecha?.startsWith(mes));
@@ -2160,7 +2046,7 @@ async function loadDashboard(){
   const sinStock = productos.filter(p=>(p.stock||0)<=(p.stock_minimo||5));
   const totalCMes = cMes.reduce((s,c)=>s+(c.total||0),0);
   const ultimaCompra = allCompras[0];
-  if(!proveedores.length) proveedores = await api('proveedores','GET',null,'?order=nombre');
+  if(!proveedores.length) proveedores = await api('proveedores','GET',null,'?order=nombre').catch(()=>[]);
   const ultimaProv = ultimaCompra ? (proveedores.find(x=>x.id===ultimaCompra.proveedor_id)?.nombre||'—') : '—';
 
   // Valor inventario a precio venta y costo
@@ -2403,8 +2289,12 @@ async function renderDashFlujo(allVentas, allAbonos, allCompras, mes){
 async function loadVentas(){
   document.getElementById('ventas-list').innerHTML='<div class="loading"><div class="spin"></div>Cargando...</div>';
   if(!clientes.length) clientes = await api('clientes','GET',null,'?order=nombre');
-  ventas = await api('ventas','GET',null,'?order=numero_factura.desc');
+  [ventas, abonos] = await Promise.all([
+    api('ventas','GET',null,'?order=numero_factura.desc'),
+    abonos.length ? Promise.resolve(abonos) : api('abonos','GET',null,'?order=fecha.desc')
+  ]);
   renderVentas(ventas);
+  cacheSet('ventas');
 }
 
 function renderVentas(data){
@@ -2454,6 +2344,15 @@ async function openVentaModal(){
   document.getElementById('prod-rows').innerHTML = '';
   updateTotales();
   addProdRow();
+  // Populate usuario select
+  const uSel = document.getElementById('v-usuario');
+  if(uSel){
+    uSel.innerHTML = '<option value="">— Sin asignar —</option>';
+    if(!usuariosList.length){
+      try{ usuariosList = await api('usuarios','GET',null,'?order=nombre'); }catch(e){}
+    }
+    usuariosList.forEach(u => uSel.innerHTML += `<option value="${u.id}">${u.nombre}</option>`);
+  }
   openModal('m-venta');
 }
 
@@ -2463,6 +2362,7 @@ function addProdRow(prodData=null){
   const div = document.createElement('div');
   div.className='prod-row'; div.id=id;
   div.dataset.prodId = prodData?.id || '';
+  div.dataset.compraId = '';
   div.innerHTML=`
     <div class="prod-autocomplete">
       <input type="text" class="psel-txt" placeholder="Buscar producto..." autocomplete="off"
@@ -2472,6 +2372,9 @@ function addProdRow(prodData=null){
         onblur="setTimeout(()=>closeAC('${id}'),300)">
       <div class="prod-ac-dropdown" id="ac-${id}"></div>
     </div>
+    <select class="plote" onchange="document.getElementById('${id}').dataset.compraId=this.value" style="font-size:12px;">
+      <option value="">— Lote —</option>
+    </select>
     <input type="number" class="pcant" value="1" min="1" oninput="calcRow('${id}')">
     <input type="number" class="pprec" value="${prodData ? (prodData.precio_venta||0) : 0}" min="0" oninput="calcRow('${id}')">
     <span class="prod-sub-lbl psub">$0</span>
@@ -2506,9 +2409,19 @@ async function saveVenta(){
   const rows = [...document.querySelectorAll('#prod-rows .prod-row')];
   const detalles = rows.map(r=>({
     producto_id: r.dataset.prodId||'',
+    compra_id: r.dataset.compraId||null,
     cantidad: parseFloat(r.querySelector('.pcant').value)||0,
     precio_unitario: parseFloat(r.querySelector('.pprec').value)||0
   })).filter(d=>d.producto_id && d.cantidad>0);
+
+  // Validar stock antes de guardar
+  for(const d of detalles){
+    const prod = productos.find(p=>p.id===d.producto_id);
+    if(prod && (prod.stock||0) < d.cantidad){
+      toast(`Stock insuficiente: ${prod.descripcion} (disponible: ${prod.stock||0})`, 'err');
+      return;
+    }
+  }
 
   if(!detalles.length){ toast('Agrega al menos un producto','err'); return; }
 
@@ -2527,418 +2440,26 @@ async function saveVenta(){
       notas: document.getElementById('v-notas').value,
       total_venta: total,
       saldo_pendiente: saldo,
-      usuario_id: currentUser?.id || null
+      usuario_id: document.getElementById('v-usuario')?.value || null
     });
 
     for(const d of detalles){
-      // FIFO: buscar la compra más antigua con stock disponible de este producto
-      const compraId = await fifoGetCompraId(d.producto_id);
-      await api('detalle_ventas','POST',{id:uid(),venta_id:ventaId,...d, compra_id: compraId});
+      await api('detalle_ventas','POST',{id:uid(),venta_id:ventaId,...d, compra_id: d.compra_id||null});
       // Descontar stock
       const prod = productos.find(p=>p.id===d.producto_id);
       if(prod){
         const newStock = Math.max(0,(prod.stock||0)-d.cantidad);
         await api('productos','PATCH',{stock:newStock},`?id=eq.${d.producto_id}`);
+        prod.stock = newStock; // update local cache
       }
     }
 
     closeModal('m-venta');
     toast('Venta guardada ✓','ok');
+    cacheClearAll();
     loadVentas();
     preloadAll();
   }catch(e){ toast(e.message,'err'); }
-}
-
-// FIFO: devuelve el id de la compra más antigua que tenga este producto
-async function fifoGetCompraId(productoId){
-  try{
-    // Buscar detalle_compras de este producto, ordenado por fecha de compra (más antiguo primero)
-    const detallesCompra = await api('detalle_compras','GET',null,`?producto_id=eq.${productoId}&select=compra_id,compras(id,fecha,numero_pedido)&order=compra_id`);
-    if(!detallesCompra || !detallesCompra.length) return null;
-    // Ordenar por fecha de compra ascendente (FIFO = lo más viejo primero)
-    const conFecha = detallesCompra
-      .filter(d=>d.compras)
-      .sort((a,b)=>new Date(a.compras.fecha)-new Date(b.compras.fecha));
-    return conFecha.length ? conFecha[0].compra_id : detallesCompra[0].compra_id;
-  }catch(e){
-    return null; // Si falla, continúa sin compra_id
-  }
-}
-
-async function delVenta(id){
-  if(!confirm('¿Eliminar esta venta?')) return;
-  await api('detalle_ventas','DELETE',null,`?venta_id=eq.${id}`);
-  await api('abonos','DELETE',null,`?venta_id=eq.${id}`);
-  await api('ventas','DELETE',null,`?id=eq.${id}`);
-  toast('Venta eliminada'); loadVentas();
-}
-
-// ===== CARTERA =====
-async function loadCartera(){
-  document.getElementById('cartera-list').innerHTML='<div class="loading"><div class="spin"></div>Cargando...</div>';
-  if(!clientes.length) clientes = await api('clientes','GET',null,'?order=nombre');
-  const pend = await api('ventas','GET',null,'?saldo_pendiente=gt.0&order=saldo_pendiente.desc');
-  const el = document.getElementById('cartera-list');
-  if(!pend.length){ el.innerHTML='<div class="empty"><div class="e-ico">🎉</div><p>Sin deudas pendientes</p></div>'; return; }
-  el.innerHTML = `<table>
-    <thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Teléfono</th><th>Total</th><th>Saldo Pend.</th><th>Días</th><th></th></tr></thead>
-    <tbody>${pend.map(v=>{
-      const c = clientes.find(x=>x.id===v.cliente_id);
-      const dias = Math.floor((new Date()-new Date(v.fecha))/(1000*60*60*24));
-      return `<tr>
-        <td class="fw7 c-rose">#${v.numero_factura}</td>
-        <td>${v.fecha}</td>
-        <td class="fw7">${c?.nombre||'—'}</td>
-        <td>${c?.telefono||'—'}</td>
-        <td>${fmt(v.total_venta)}</td>
-        <td class="fw7 c-amber">${fmt(v.saldo_pendiente)}</td>
-        <td><span class="badge ${dias>30?'b-rose':dias>15?'b-amber':'b-mist'}">${dias}d</span></td>
-        <td style="text-align:right;white-space:nowrap;">
-          <button class="btn btn-xs btn-green" onclick="openAbonoModal('${v.id}')">💰 Abonar</button>
-          <button class="btn btn-xs btn-ghost" onclick="cobrarWA('${v.id}','${c?.telefono||''}','${c?.nombre||''}',${v.saldo_pendiente||0},${v.numero_factura})">📱</button>
-        </td>
-      </tr>`;
-    }).join('')}</tbody></table>`;
-}
-
-function cobrarWA(vid,tel,nombre,saldo,num){
-  const phone = (tel||'').replace(/\D/g,'');
-  const msg = `Hola ${nombre}, te recordamos que tienes un saldo pendiente de ${fmt(saldo)} correspondiente a la Factura #${num} de La Gloria de Dios.\n\n¡Gracias por tu preferencia! 🌟\nWhatsApp: 313 863 59 17`;
-  window.open(`https://wa.me/57${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-}
-
-// ===== ABONOS =====
-async function loadAbonos(){
-  document.getElementById('abonos-list').innerHTML='<div class="loading"><div class="spin"></div>Cargando...</div>';
-  if(!clientes.length) clientes = await api('clientes','GET',null,'?order=nombre');
-  abonos = await api('abonos','GET',null,'?order=fecha.desc&limit=200');
-  const allV = await api('ventas','GET',null,'?select=id,numero_factura,cliente_id');
-  const el = document.getElementById('abonos-list');
-  if(!abonos.length){ el.innerHTML='<div class="empty"><div class="e-ico">💰</div><p>Sin abonos</p></div>'; return; }
-  el.innerHTML = `<table>
-    <thead><tr><th>Fecha</th><th>Factura</th><th>Cliente</th><th>Método</th><th>Monto</th><th></th></tr></thead>
-    <tbody>${abonos.map(a=>{
-      const v = allV.find(x=>x.id===a.venta_id);
-      const c = v ? clientes.find(x=>x.id===v.cliente_id) : null;
-      return `<tr>
-        <td>${a.fecha}</td>
-        <td class="c-rose fw7">${v?'#'+v.numero_factura:'—'}</td>
-        <td>${c?.nombre||'—'}</td>
-        <td>${a.metodo||'—'}</td>
-        <td class="c-green fw7">${fmt(a.monto)}</td>
-        <td style="text-align:right;white-space:nowrap;">
-          <button class="btn btn-xs btn-ghost" onclick="editAbono('${a.id}','${a.venta_id}',${a.monto},'${a.fecha}','${a.metodo||'Efectivo'}')">✏️</button>
-          <button class="btn btn-xs btn-ghost" onclick="delAbono('${a.id}','${a.venta_id}')" style="color:#dc2626;">🗑️</button>
-        </td>
-      </tr>`;
-    }).join('')}</tbody></table>`;
-}
-
-function editAbono(id, ventaId, monto, fecha, metodo){
-  document.getElementById('eab-id').value = id;
-  document.getElementById('eab-monto').value = monto;
-  document.getElementById('eab-fecha').value = fecha;
-  document.getElementById('eab-metodo').value = metodo;
-  openModal('m-edit-abono');
-}
-
-async function saveEditAbono(){
-  const id = document.getElementById('eab-id').value;
-  const monto = parseFloat(document.getElementById('eab-monto').value);
-  if(!monto||monto<=0){ toast('Monto inválido','err'); return; }
-  try{
-    await api('abonos','PATCH',{
-      monto,
-      fecha: document.getElementById('eab-fecha').value,
-      metodo: document.getElementById('eab-metodo').value
-    },`?id=eq.${id}`);
-    // Recalcular saldo de la venta
-    const ab = abonos.find(x=>x.id===id);
-    if(ab) await recalcSaldoVenta(ab.venta_id);
-    closeModal('m-edit-abono'); toast('Abono actualizado ✓','ok');
-    loadAbonos(); loadDashboard();
-  }catch(e){ toast(e.message,'err'); }
-}
-
-async function delAbono(id, ventaId){
-  if(!confirm('¿Eliminar este abono?')) return;
-  await api('abonos','DELETE',null,`?id=eq.${id}`);
-  await recalcSaldoVenta(ventaId);
-  toast('Abono eliminado'); loadAbonos(); loadDashboard();
-}
-
-async function recalcSaldoVenta(ventaId){
-  const v = (await api('ventas','GET',null,`?id=eq.${ventaId}`))[0];
-  if(!v) return;
-  const abs = await api('abonos','GET',null,`?venta_id=eq.${ventaId}`);
-  const totalAbonado = abs.reduce((s,a)=>s+a.monto,0);
-  const nuevoSaldo = Math.max(0,(v.total_venta||0)-totalAbonado);
-  await api('ventas','PATCH',{
-    saldo_pendiente: nuevoSaldo,
-    estado: nuevoSaldo<=0 ? 'Pagado' : 'Pendiente'
-  },`?id=eq.${ventaId}`);
-}
-
-async function openAbonoModal(ventaId){
-  if(!clientes.length) clientes = await api('clientes','GET',null,'?order=nombre');
-  const v = ventas.find(x=>x.id===ventaId) || (await api('ventas','GET',null,`?id=eq.${ventaId}`))[0];
-  const c = clientes.find(x=>x.id===v.cliente_id);
-  const prevAbonos = await api('abonos','GET',null,`?venta_id=eq.${ventaId}&order=fecha`);
-  const abonado = prevAbonos.reduce((s,a)=>s+a.monto,0);
-
-  document.getElementById('ab-venta-id').value = ventaId;
-  document.getElementById('ab-fecha').value = today();
-  document.getElementById('ab-monto').value = '';
-  document.getElementById('ab-info').innerHTML = `
-    <strong>Factura #${v.numero_factura}</strong> — ${c?.nombre||'?'}<br>
-    <span style="font-size:12px;">
-      Total: <strong>${fmt(v.total_venta)}</strong> &nbsp;|&nbsp;
-      Abonado: <strong style="color:var(--green)">${fmt(abonado)}</strong> &nbsp;|&nbsp;
-      <strong style="color:var(--amber)">Pendiente: ${fmt(v.saldo_pendiente||0)}</strong>
-    </span>`;
-
-  const prevEl = document.getElementById('ab-previos');
-  prevEl.innerHTML = prevAbonos.length ?
-    `<div style="font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;margin-bottom:8px;">Abonos anteriores</div>` +
-    prevAbonos.map(a=>`<div class="abono-prev">
-      <span>${a.fecha} · ${a.metodo}</span>
-      <strong class="c-green">${fmt(a.monto)}</strong>
-    </div>`).join('') : '';
-
-  openModal('m-abono');
-}
-
-async function saveAbono(){
-  const ventaId = document.getElementById('ab-venta-id').value;
-  const monto = parseFloat(document.getElementById('ab-monto').value);
-  if(!monto || monto<=0){ toast('Monto inválido','err'); return; }
-  try{
-    await api('abonos','POST',{
-      id:uid(), venta_id:ventaId,
-      fecha: document.getElementById('ab-fecha').value,
-      monto,
-      metodo: document.getElementById('ab-metodo').value
-    });
-    const prevAbonos = await api('abonos','GET',null,`?venta_id=eq.${ventaId}`);
-    const total = prevAbonos.reduce((s,a)=>s+a.monto,0);
-    const v = ventas.find(x=>x.id===ventaId)||(await api('ventas','GET',null,`?id=eq.${ventaId}`))[0];
-    const nuevoSaldo = Math.max(0,(v.total_venta||0)-total);
-    await api('ventas','PATCH',{
-      saldo_pendiente: nuevoSaldo,
-      estado: nuevoSaldo<=0 ? 'Pagado' : 'Pendiente'
-    },`?id=eq.${ventaId}`);
-    closeModal('m-abono'); toast('Abono registrado ✓','ok');
-    loadVentas(); loadDashboard();
-  }catch(e){ toast(e.message,'err'); }
-}
-
-// ===== COMPRAS =====
-async function loadCompras(){
-  document.getElementById('compras-list').innerHTML='<div class="loading"><div class="spin"></div>Cargando...</div>';
-  if(!proveedores.length) proveedores = await api('proveedores','GET',null,'?order=nombre');
-  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
-  const data = await api('compras','GET',null,'?order=created_at.desc');
-  const el = document.getElementById('compras-list');
-  if(!data.length){ el.innerHTML='<div class="empty"><div class="e-ico">🛒</div><p>Sin compras</p></div>'; return; }
-
-  // Cargar todos los detalles de una vez
-  const detallesAll = await api('detalle_compras','GET',null,'?limit=2000');
-
-  el.innerHTML = `<table>
-    <thead><tr><th>N° Pedido</th><th>Fecha</th><th>Proveedor</th><th>Productos</th><th>Total</th><th></th></tr></thead>
-    <tbody>${data.map(c=>{
-      const p = proveedores.find(x=>x.id===c.proveedor_id);
-      const dets = detallesAll.filter(d=>d.compra_id===c.id);
-      const prodsStr = dets.map(d=>{
-        const prod = productos.find(x=>x.id===d.producto_id);
-        return `<span style="display:inline-block;background:var(--mist);border-radius:4px;padding:1px 6px;font-size:11px;margin:1px;">${prod?.descripcion||'?'} ×${d.cantidad}</span>`;
-      }).join('');
-      return `<tr>
-        <td class="fw7 c-rose">${c.numero_pedido||'—'}</td>
-        <td>${c.fecha}</td>
-        <td class="fw7">${p?.nombre||'—'}</td>
-        <td style="max-width:260px;">${prodsStr||'—'}</td>
-        <td class="fw7">${fmt(c.total)}</td>
-        <td style="text-align:right;white-space:nowrap;">
-          <button class="btn btn-xs btn-ghost" title="Ver orden de compra" onclick="viewFacturaCompra('${c.id}')">🧾</button>
-          <button class="btn btn-xs btn-ghost" onclick="editCompra('${c.id}')">✏️</button>
-          <button class="btn btn-xs btn-ghost" onclick="delCompra('${c.id}')" style="color:#dc2626;">🗑️</button>
-        </td>
-      </tr>`;
-    }).join('')}</tbody></table>`;
-}
-
-async function openCompraModal(){
-  if(!proveedores.length) proveedores = await api('proveedores','GET',null,'?order=nombre');
-  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
-  document.getElementById('c-prov').innerHTML = '<option value="">Seleccionar...</option>'+
-    proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
-  document.getElementById('c-fecha').value = today();
-  document.getElementById('c-num').value = '';
-  document.getElementById('c-notas').value = '';
-  document.getElementById('compra-rows').innerHTML = '';
-  document.getElementById('t-compra').textContent = '$0';
-  addCompraRow();
-  openModal('m-compra');
-}
-
-function addCompraRow(prodData=null){
-  rowIdx++;
-  const id = `cr-${rowIdx}`;
-  const div = document.createElement('div');
-  div.className='prod-row'; div.id=id;
-  div.dataset.prodId = prodData?.id || '';
-  div.innerHTML=`
-    <div class="prod-autocomplete">
-      <input type="text" class="psel-txt" placeholder="Buscar producto..." autocomplete="off"
-        value="${prodData ? prodData.descripcion : ''}"
-        oninput="filterAC('${id}','compra')"
-        onfocus="openAC('${id}')"
-        onblur="setTimeout(()=>closeAC('${id}'),300)">
-      <div class="prod-ac-dropdown" id="ac-${id}"></div>
-    </div>
-    <input type="number" class="pcant" value="1" min="1" oninput="calcCRow('${id}')">
-    <input type="number" class="pprec" value="${prodData ? (prodData.costo||0) : 0}" min="0" oninput="calcCRow('${id}')">
-    <span class="prod-sub-lbl psub">$0</span>
-    <button onclick="removeCRow('${id}')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px;">✕</button>`;
-  document.getElementById('compra-rows').appendChild(div);
-  if(prodData) calcCRow(id);
-}
-
-function calcCRow(id){
-  const row = document.getElementById(id);
-  const cant = parseFloat(row.querySelector('.pcant').value)||0;
-  const prec = parseFloat(row.querySelector('.pprec').value)||0;
-  row.querySelector('.psub').textContent = fmt(cant*prec);
-  let total=0;
-  document.querySelectorAll('#compra-rows .prod-row').forEach(r=>{
-    total+=(parseFloat(r.querySelector('.pcant')?.value)||0)*(parseFloat(r.querySelector('.pprec')?.value)||0);
-  });
-  document.getElementById('t-compra').textContent = fmt(total);
-}
-
-function removeCRow(id){ document.getElementById(id)?.remove(); calcCRow('__'); }
-
-async function saveCompra(){
-  const provId = document.getElementById('c-prov').value;
-  if(!provId){ toast('Selecciona un proveedor','err'); return; }
-  const rows = [...document.querySelectorAll('#compra-rows .prod-row')];
-  const detalles = rows.map(r=>({
-    producto_id:r.dataset.prodId||'',
-    cantidad:parseFloat(r.querySelector('.pcant').value)||0,
-    costo_unitario:parseFloat(r.querySelector('.pprec').value)||0
-  })).filter(d=>d.producto_id&&d.cantidad>0);
-  if(!detalles.length){ toast('Agrega productos','err'); return; }
-  const total = detalles.reduce((s,d)=>s+d.cantidad*d.costo_unitario,0);
-  try{
-    const cId = uid();
-    await api('compras','POST',{
-      id:cId, proveedor_id:provId,
-      fecha:document.getElementById('c-fecha').value,
-      numero_pedido:document.getElementById('c-num').value,
-      notas:document.getElementById('c-notas').value,
-      total
-    });
-    for(const d of detalles){
-      await api('detalle_compras','POST',{id:uid(),compra_id:cId,...d});
-      // Aumentar stock
-      const prod = productos.find(p=>p.id===d.producto_id);
-      if(prod){
-        await api('productos','PATCH',{stock:(prod.stock||0)+d.cantidad},`?id=eq.${d.producto_id}`);
-      }
-    }
-    closeModal('m-compra'); toast('Compra guardada ✓','ok'); loadCompras(); preloadAll();
-  }catch(e){ toast(e.message,'err'); }
-}
-
-async function editCompra(id){
-  if(!proveedores.length) proveedores = await api('proveedores','GET',null,'?order=nombre');
-  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
-  const c = (await api('compras','GET',null,`?id=eq.${id}`))[0];
-  const dets = await api('detalle_compras','GET',null,`?compra_id=eq.${id}`);
-
-  document.getElementById('ec-id').value = c.id;
-  document.getElementById('ec-prov').innerHTML = '<option value="">Seleccionar...</option>'+
-    proveedores.map(p=>`<option value="${p.id}" ${p.id===c.proveedor_id?'selected':''}>${p.nombre}</option>`).join('');
-  document.getElementById('ec-fecha').value = c.fecha||'';
-  document.getElementById('ec-num').value = c.numero_pedido||'';
-  document.getElementById('ec-notas').value = c.notas||'';
-
-  document.getElementById('ec-rows').innerHTML='';
-  document.getElementById('t-ec').textContent='$0';
-  dets.forEach(d=>addEditCompraRow(d));
-  if(!dets.length) addEditCompraRow();
-  calcECRow();
-  openModal('m-edit-compra');
-}
-
-function addEditCompraRow(d=null){
-  rowIdx++;
-  const id=`ecr-${rowIdx}`;
-  const prod = d ? productos.find(x=>x.id===d.producto_id) : null;
-  const div=document.createElement('div');
-  div.className='prod-row'; div.id=id;
-  div.dataset.prodId = prod?.id || '';
-  div.innerHTML=`
-    <div class="prod-autocomplete">
-      <input type="text" class="psel-txt" placeholder="Buscar producto..." autocomplete="off"
-        value="${prod ? prod.descripcion : ''}"
-        oninput="filterAC('${id}','compra')"
-        onfocus="openAC('${id}')"
-        onblur="setTimeout(()=>closeAC('${id}'),300)">
-      <div class="prod-ac-dropdown" id="ac-${id}"></div>
-    </div>
-    <input type="number" class="pcant" value="${d?d.cantidad:1}" min="1" oninput="calcECRow()">
-    <input type="number" class="pprec" value="${d?d.costo_unitario:0}" min="0" oninput="calcECRow()">
-    <span class="prod-sub-lbl psub">${d?fmt(d.cantidad*d.costo_unitario):'$0'}</span>
-    <button onclick="document.getElementById('${id}').remove();calcECRow()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px;">✕</button>`;
-  document.getElementById('ec-rows').appendChild(div);
-}
-
-function calcECRow(){
-  let total=0;
-  document.querySelectorAll('#ec-rows .prod-row').forEach(r=>{
-    const cant=parseFloat(r.querySelector('.pcant')?.value)||0;
-    const prec=parseFloat(r.querySelector('.pprec')?.value)||0;
-    r.querySelector('.psub').textContent=fmt(cant*prec);
-    total+=cant*prec;
-  });
-  document.getElementById('t-ec').textContent=fmt(total);
-}
-
-async function saveEditCompra(){
-  const id=document.getElementById('ec-id').value;
-  const provId=document.getElementById('ec-prov').value;
-  if(!provId){ toast('Selecciona un proveedor','err'); return; }
-  const rows=[...document.querySelectorAll('#ec-rows .prod-row')];
-  const detalles=rows.map(r=>({
-    producto_id:r.dataset.prodId||'',
-    cantidad:parseFloat(r.querySelector('.pcant').value)||0,
-    costo_unitario:parseFloat(r.querySelector('.pprec').value)||0
-  })).filter(d=>d.producto_id&&d.cantidad>0);
-  if(!detalles.length){ toast('Agrega productos','err'); return; }
-  const total=detalles.reduce((s,d)=>s+d.cantidad*d.costo_unitario,0);
-  try{
-    await api('compras','PATCH',{
-      proveedor_id:provId,
-      fecha:document.getElementById('ec-fecha').value,
-      numero_pedido:document.getElementById('ec-num').value,
-      notas:document.getElementById('ec-notas').value,
-      total
-    },`?id=eq.${id}`);
-    await api('detalle_compras','DELETE',null,`?compra_id=eq.${id}`);
-    for(const d of detalles){
-      await api('detalle_compras','POST',{id:uid(),compra_id:id,...d});
-    }
-    closeModal('m-edit-compra'); toast('Compra actualizada ✓','ok'); loadCompras(); preloadAll();
-  }catch(e){ toast(e.message,'err'); }
-}
-
-async function delCompra(id){
-  if(!confirm('¿Eliminar esta compra?')) return;
-  await api('detalle_compras','DELETE',null,`?compra_id=eq.${id}`);
-  await api('compras','DELETE',null,`?id=eq.${id}`);
-  toast('Compra eliminada'); loadCompras();
 }
 
 // ===== FACTURA =====
@@ -3358,7 +2879,6 @@ function exportReporteExcel(){
 // Agregar columnas faltantes en productos si no existen (se maneja desde SQL)
 
 // ===== PRÓXIMAS COMPRAS =====
-let listaPC = [];
 let pcFiltro = 'todas';
 
 function switchPCTab(tab){
@@ -3380,280 +2900,6 @@ function filterPC(f){
   renderPC();
 }
 
-async function loadProximas(){
-  document.getElementById('pc-list').innerHTML='<div class="loading"><div class="spin"></div>Cargando...</div>';
-  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
-  listaPC = await api('lista_compras','GET',null,'?order=prioridad,created_at.desc');
-  renderPC();
-}
-
-function renderPC(){
-  const el = document.getElementById('pc-list');
-  let data = [...listaPC];
-  if(pcFiltro==='alta') data = data.filter(x=>x.prioridad==='alta');
-  else if(pcFiltro==='media') data = data.filter(x=>x.prioridad==='media');
-  else if(pcFiltro==='baja') data = data.filter(x=>x.prioridad==='baja');
-  else if(pcFiltro==='pendientes') data = data.filter(x=>!x.completado);
-
-  // Ordenar: alta primero, luego pendientes antes de completados
-  const orden = {alta:0,media:1,baja:2};
-  data.sort((a,b)=>{
-    if(a.completado !== b.completado) return a.completado ? 1 : -1;
-    return (orden[a.prioridad]||1) - (orden[b.prioridad]||1);
-  });
-
-  if(!data.length){ el.innerHTML='<div class="empty"><div class="e-ico">📋</div><p>Lista vacía — agrega productos para tu próxima compra</p></div>'; return; }
-
-  el.innerHTML = data.map(item=>{
-    const prod = productos.find(x=>x.id===item.producto_id);
-    const prClase = item.prioridad==='alta'?'pr-alta':item.prioridad==='baja'?'pr-baja':'pr-media';
-    const prLabel = item.prioridad==='alta'?'🔴 Alta':item.prioridad==='baja'?'🟢 Baja':'🟡 Media';
-    return `<div class="pc-item ${item.completado?'completado':''}" id="pci-${item.id}">
-      <div>
-        <div class="pc-nombre">${prod?.descripcion||'Producto desconocido'}</div>
-        <div class="pc-meta">
-          <span class="pr-badge ${prClase}">${prLabel}</span>
-          ${item.cantidad_sugerida?`<span>📦 Cant. sugerida: <strong>${item.cantidad_sugerida}</strong></span>`:''}
-          ${prod?.stock!=null?`<span>Stock actual: <strong>${prod.stock} ${prod.unidad||'und'}</strong></span>`:''}
-          ${prod?.costo?`<span>Costo ref: <strong>${fmt(prod.costo)}</strong></span>`:''}
-        </div>
-        ${item.nota?`<div class="pc-nota">💬 ${item.nota}</div>`:''}
-      </div>
-      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
-        <button class="btn btn-xs ${item.completado?'btn-mist':'btn-green'}" onclick="toggleCompletado('${item.id}',${!item.completado})">
-          ${item.completado?'↩️ Reactivar':'✅ Completado'}
-        </button>
-        <button class="btn btn-xs btn-ghost" onclick="editPC('${item.id}')">✏️</button>
-        <button class="btn btn-xs btn-ghost" onclick="delPC('${item.id}')" style="color:#dc2626;">🗑️</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function openPCModal(){
-  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
-  document.getElementById('pc-id').value='';
-  document.getElementById('pc-producto').innerHTML =
-    '<option value="">Seleccionar producto...</option>'+
-    productos.map(p=>`<option value="${p.id}">${p.descripcion} (stock: ${p.stock||0})</option>`).join('');
-  document.getElementById('pc-cantidad').value='';
-  document.getElementById('pc-prioridad').value='media';
-  document.getElementById('pc-nota').value='';
-  document.getElementById('m-pc-title').textContent='Agregar a lista de compras';
-  openModal('m-pc');
-}
-
-function editPC(id){
-  const item = listaPC.find(x=>x.id===id);
-  if(!item) return;
-  document.getElementById('pc-id').value=item.id;
-  document.getElementById('pc-producto').innerHTML =
-    '<option value="">Seleccionar producto...</option>'+
-    productos.map(p=>`<option value="${p.id}" ${p.id===item.producto_id?'selected':''}>${p.descripcion} (stock: ${p.stock||0})</option>`).join('');
-  document.getElementById('pc-cantidad').value=item.cantidad_sugerida||'';
-  document.getElementById('pc-prioridad').value=item.prioridad||'media';
-  document.getElementById('pc-nota').value=item.nota||'';
-  document.getElementById('m-pc-title').textContent='Editar item';
-  openModal('m-pc');
-}
-
-async function savePC(){
-  const id = document.getElementById('pc-id').value;
-  const prodId = document.getElementById('pc-producto').value;
-  if(!prodId){ toast('Selecciona un producto','err'); return; }
-  const data = {
-    producto_id: prodId,
-    cantidad_sugerida: parseFloat(document.getElementById('pc-cantidad').value)||null,
-    prioridad: document.getElementById('pc-prioridad').value,
-    nota: document.getElementById('pc-nota').value.trim()||null,
-    completado: false
-  };
-  try{
-    if(id) await api('lista_compras','PATCH',data,`?id=eq.${id}`);
-    else await api('lista_compras','POST',{...data, id:uid()});
-    closeModal('m-pc'); toast('Guardado ✓','ok'); loadProximas();
-  }catch(e){ toast(e.message,'err'); }
-}
-
-async function toggleCompletado(id, val){
-  await api('lista_compras','PATCH',{completado:val},`?id=eq.${id}`);
-  const item = listaPC.find(x=>x.id===id);
-  if(item) item.completado=val;
-  renderPC();
-}
-
-async function delPC(id){
-  if(!confirm('¿Eliminar este item?')) return;
-  await api('lista_compras','DELETE',null,`?id=eq.${id}`);
-  listaPC = listaPC.filter(x=>x.id!==id);
-  renderPC(); toast('Eliminado');
-}
-
-async function limpiarCompletados(){
-  const completados = listaPC.filter(x=>x.completado);
-  if(!completados.length){ toast('No hay completados','err'); return; }
-  if(!confirm(`¿Eliminar ${completados.length} item(s) completados?`)) return;
-  for(const item of completados){
-    await api('lista_compras','DELETE',null,`?id=eq.${item.id}`);
-  }
-  toast(`${completados.length} eliminados`,'ok'); loadProximas();
-}
-
-// ===== SUGERIDOS — STOCK BAJO =====
-async function loadSugeridos(){
-  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
-
-  const stockBajo = productos
-    .filter(p => (p.stock||0) <= (p.stock_minimo||5))
-    .sort((a,b) => (a.stock||0) - (b.stock||0));
-
-  const yaEnLista = new Set(listaPC.filter(x=>!x.completado).map(x=>x.producto_id));
-  const sinAgregar = stockBajo.filter(p => !yaEnLista.has(p.id));
-
-  // Mostrar/ocultar botón "agregar todos"
-  document.getElementById('btn-agregar-todos-stock').style.display =
-    sinAgregar.length > 1 ? 'inline-flex' : 'none';
-
-  const el = document.getElementById('sug-stock-bajo');
-
-  if(!stockBajo.length){
-    el.innerHTML = '<div class="empty"><p>🎉 Todo con stock suficiente</p></div>';
-    return;
-  }
-
-  el.innerHTML = stockBajo.map(p => {
-    const yaEsta = yaEnLista.has(p.id);
-    const cantSug = Math.max(1, (p.stock_minimo||5) * 2 - (p.stock||0));
-    return `<div class="sugerido-item" style="${yaEsta?'opacity:.5':''}">
-      <div class="si-info">
-        <div class="si-nombre">${p.descripcion}</div>
-        <div class="si-meta">
-          Stock actual: <strong style="color:var(--amber)">${p.stock||0}</strong> ${p.unidad||'und'}
-          &nbsp;·&nbsp; Mínimo: <strong>${p.stock_minimo||5}</strong>
-          &nbsp;·&nbsp; Sugerido pedir: <strong>${cantSug}</strong>
-        </div>
-      </div>
-      ${yaEsta
-        ? `<span class="badge b-green">✅ En lista</span>`
-        : `<button class="btn btn-xs btn-rose" onclick="agregarSugerido('${p.id}','alta',${cantSug})">+ Lista</button>`
-      }
-    </div>`;
-  }).join('');
-}
-
-async function agregarSugerido(prodId, prioridad, cant){
-  const yaExiste = listaPC.find(x=>x.producto_id===prodId && !x.completado);
-  if(yaExiste){ toast('Ya está en tu lista','err'); return; }
-  try{
-    await api('lista_compras','POST',{
-      id:uid(), producto_id:prodId,
-      prioridad, cantidad_sugerida:cant, completado:false, nota:null
-    });
-    toast('Agregado a tu lista ✓','ok');
-    await loadProximas();
-    loadSugeridos();
-  }catch(e){ toast(e.message,'err'); }
-}
-
-async function agregarTodosStockBajo(){
-  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
-  const yaEnLista = new Set(listaPC.filter(x=>!x.completado).map(x=>x.producto_id));
-  const stockBajo = productos.filter(p => (p.stock||0)<=(p.stock_minimo||5) && !yaEnLista.has(p.id));
-  if(!stockBajo.length){ toast('Todos ya están en tu lista','err'); return; }
-  for(const p of stockBajo){
-    const cantSug = Math.max(1,(p.stock_minimo||5)*2-(p.stock||0));
-    await api('lista_compras','POST',{id:uid(),producto_id:p.id,prioridad:'alta',cantidad_sugerida:cantSug,completado:false,nota:null});
-  }
-  toast(`${stockBajo.length} productos agregados ✓`,'ok');
-  await loadProximas();
-  loadSugeridos();
-}
-
-// ===== CONVERTIR LISTA EN COMPRA =====
-async function convertirListaEnCompra(){
-  const pendientes = listaPC.filter(x=>!x.completado);
-  if(!pendientes.length){ toast('No hay items pendientes en la lista','err'); return; }
-  if(!proveedores.length) proveedores = await api('proveedores','GET',null,'?order=nombre');
-  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
-
-  document.getElementById('pcc-prov').innerHTML = '<option value="">Seleccionar proveedor...</option>'+
-    proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
-  document.getElementById('pcc-fecha').value = today();
-  document.getElementById('pcc-num').value='';
-  document.getElementById('pcc-notas').value='';
-
-  // Llenar filas con los pendientes
-  const container = document.getElementById('pcc-rows');
-  container.innerHTML='';
-  pendientes.forEach(item=>{
-    const prod = productos.find(x=>x.id===item.producto_id);
-    rowIdx++;
-    const id=`pccr-${rowIdx}`;
-    const div=document.createElement('div');
-    div.className='prod-row'; div.id=id;
-    div.innerHTML=`
-      <select class="psel" onchange="calcPCCRow()">
-        ${productos.map(p=>`<option value="${p.id}" data-costo="${p.costo}" ${p.id===item.producto_id?'selected':''}>${p.descripcion}</option>`).join('')}
-      </select>
-      <input type="number" class="pcant" value="${item.cantidad_sugerida||1}" min="1" oninput="calcPCCRow()">
-      <input type="number" class="pprec" value="${prod?.costo||0}" min="0" oninput="calcPCCRow()">
-      <span class="prod-sub-lbl psub">${fmt((item.cantidad_sugerida||1)*(prod?.costo||0))}</span>
-      <button onclick="document.getElementById('${id}').remove();calcPCCRow()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px;">✕</button>`;
-    container.appendChild(div);
-  });
-  calcPCCRow();
-  openModal('m-pc-compra');
-}
-
-function calcPCCRow(){
-  let total=0;
-  document.querySelectorAll('#pcc-rows .prod-row').forEach(r=>{
-    const cant=parseFloat(r.querySelector('.pcant')?.value)||0;
-    const prec=parseFloat(r.querySelector('.pprec')?.value)||0;
-    if(r.querySelector('.psub')) r.querySelector('.psub').textContent=fmt(cant*prec);
-    total+=cant*prec;
-  });
-  document.getElementById('t-pcc').textContent=fmt(total);
-}
-
-async function savePCCompra(){
-  const provId=document.getElementById('pcc-prov').value;
-  if(!provId){ toast('Selecciona un proveedor','err'); return; }
-  const rows=[...document.querySelectorAll('#pcc-rows .prod-row')];
-  const detalles=rows.map(r=>({
-    producto_id:r.querySelector('.psel').value,
-    cantidad:parseFloat(r.querySelector('.pcant').value)||0,
-    costo_unitario:parseFloat(r.querySelector('.pprec').value)||0
-  })).filter(d=>d.producto_id&&d.cantidad>0);
-  if(!detalles.length){ toast('Agrega productos','err'); return; }
-  const total=detalles.reduce((s,d)=>s+d.cantidad*d.costo_unitario,0);
-  try{
-    const cId=uid();
-    await api('compras','POST',{
-      id:cId, proveedor_id:provId,
-      fecha:document.getElementById('pcc-fecha').value,
-      numero_pedido:document.getElementById('pcc-num').value,
-      notas:document.getElementById('pcc-notas').value||'Generado desde Lista de Compras',
-      total
-    });
-    for(const d of detalles){
-      await api('detalle_compras','POST',{id:uid(),compra_id:cId,...d});
-      const prod=productos.find(p=>p.id===d.producto_id);
-      if(prod) await api('productos','PATCH',{stock:(prod.stock||0)+d.cantidad},`?id=eq.${d.producto_id}`);
-    }
-    // Marcar como completados los items que estaban en la lista
-    const pendientes=listaPC.filter(x=>!x.completado);
-    for(const item of pendientes){
-      if(detalles.find(d=>d.producto_id===item.producto_id)){
-        await api('lista_compras','PATCH',{completado:true},`?id=eq.${item.id}`);
-      }
-    }
-    closeModal('m-pc-compra');
-    toast('Compra creada y lista actualizada ✓','ok');
-    loadProximas(); preloadAll();
-  }catch(e){ toast(e.message,'err'); }
-}
-
 // ===== MÓDULO STOCK =====
 let _stockFiltro = 'todos';
 let _stockSearch = '';
@@ -3661,6 +2907,7 @@ let _stockSearch = '';
 async function loadStock(){
   if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
   renderStock();
+  cacheSet('stock');
 }
 
 function getStockSemaforo(p){
@@ -3733,7 +2980,7 @@ function renderStock(){
         <td class="fw7">${fmt(valorInv)}</td>
         <td style="text-align:right;white-space:nowrap;">
           ${isAdmin ? `<button class="btn btn-xs btn-ghost" onclick="editProducto('${p.id}')" title="Editar stock">✏️</button>` : ''}
-          ${sem.grupo==='bajo'||sem.grupo==='sin' ? `<button class="btn btn-xs btn-amber" onclick="showPage('proximas')" title="Agregar a lista de compra" style="font-size:10px;">+ Pedir</button>` : ''}
+          ${''}
         </td>
       </tr>`;
     }).join('')}
@@ -4094,6 +3341,9 @@ async function saveRetiro(){
     });
     closeModal('m-retiro');
     toast('Retiro registrado ✓','ok');
+    cacheClear('retiros');
+    cacheClear('dashboard');
+    cacheClear('flujo');
     loadRetiros();
     loadDashboard();
   }catch(e){ toast(e.message,'err'); }
@@ -4126,6 +3376,7 @@ async function loadRetiros(){
   const tipoLabel = {bolsillo:'💸 Bolsillo', reinversion:'♻️ Reinversión', gasto_negocio:'🧾 Gasto negocio'};
   const tipoClass = {bolsillo:'rt-bolsillo', reinversion:'rt-reinversion', gasto_negocio:'rt-gasto'};
 
+  cacheSet('retiros');
   el.innerHTML = retiros.length ? `<table>
     <thead><tr><th>Fecha</th><th>Usuario</th><th>Tipo</th><th>Monto</th><th>Nota</th><th></th></tr></thead>
     <tbody>${retiros.map(r=>{
@@ -4196,22 +3447,33 @@ function posicionarAC(rowId){
 function renderAC(rowId, q='', tipo='venta'){
   const dropdown = document.getElementById(`ac-${rowId}`);
   if(!dropdown) return;
-  const lista = q
+
+  let lista = q
     ? productos.filter(p => p.descripcion.toLowerCase().includes(q))
     : [...productos];
 
+  // Para ventas: solo mostrar productos con stock > 0
+  if(tipo === 'venta'){
+    lista = lista.filter(p => (p.stock||0) > 0);
+  }
+
   if(!lista.length){
-    dropdown.innerHTML = `<div class="prod-ac-empty">Sin resultados para "${q}"</div>`;
+    const msg = tipo === 'venta'
+      ? `<div class="prod-ac-empty">Sin stock disponible${q?' para "'+q+'"':''}</div>`
+      : `<div class="prod-ac-empty">Sin resultados para "${q}"</div>`;
+    dropdown.innerHTML = msg;
     return;
   }
 
   dropdown.innerHTML = lista.map(p => {
     const precio = tipo === 'compra' ? fmt(p.costo||0) : fmt(p.precio_venta||0);
     const label = tipo === 'compra' ? 'Costo' : 'Precio';
-    // onmousedown previene que el blur cierre el dropdown antes del click
+    const stockBadge = tipo === 'venta'
+      ? `<span style="font-size:10px;color:${(p.stock||0)<=(p.stock_minimo||5)?'var(--amber)':'var(--green)'};">Stock: ${p.stock||0}</span>`
+      : '';
     return `<div class="prod-ac-item"
       onmousedown="event.preventDefault(); seleccionarAC('${rowId}','${p.id}','${tipo}')">
-      <span>${p.descripcion}</span>
+      <span>${p.descripcion} ${stockBadge}</span>
       <span class="ac-precio">${label}: ${precio}</span>
     </div>`;
   }).join('');
@@ -4224,19 +3486,71 @@ function seleccionarAC(rowId, prodId, tipo){
   if(!prod) return;
 
   row.dataset.prodId = prodId;
+  row.dataset.compraId = '';
   row.querySelector('.psel-txt').value = prod.descripcion;
   row.querySelector('.pprec').value = tipo === 'compra' ? (prod.costo||0) : (prod.precio_venta||0);
   closeAC(rowId);
 
-  // Recalcular
-  if(tipo === 'compra'){
+  // Para ventas: cargar lotes disponibles con stock de este producto
+  if(tipo === 'venta'){
+    const loteSelect = row.querySelector('.plote');
+    if(loteSelect){
+      loteSelect.innerHTML = '<option value="">⏳ Cargando lotes...</option>';
+      cargarLotes(prodId, rowId);
+    }
+    calcRow(rowId);
+  } else if(tipo === 'compra'){
     if(row.closest('#compra-rows')) calcCRow(rowId);
     else if(row.closest('#ec-rows')) calcECRow();
-  } else {
-    calcRow(rowId);
   }
   // Poner foco en cantidad
   row.querySelector('.pcant')?.focus();
+}
+
+async function cargarLotes(prodId, rowId){
+  const row = document.getElementById(rowId);
+  const loteSelect = row?.querySelector('.plote');
+  if(!loteSelect) return;
+  try{
+    // Obtener detalle_compras de este producto con datos de la compra
+    const dets = await api('detalle_compras','GET',null,
+      `?producto_id=eq.${prodId}&select=compra_id,cantidad,compras(id,fecha,numero_pedido,proveedor_id)&order=compra_id`);
+
+    if(!dets || !dets.length){
+      loteSelect.innerHTML = '<option value="">— Sin lotes —</option>';
+      return;
+    }
+
+    // Agrupar por compra_id y sumar cantidades
+    const lotesMap = {};
+    dets.forEach(d => {
+      const cid = d.compra_id;
+      if(!lotesMap[cid]){
+        lotesMap[cid] = { compra_id: cid, cantidad: 0, compra: d.compras };
+      }
+      lotesMap[cid].cantidad += (d.cantidad||0);
+    });
+
+    const lotes = Object.values(lotesMap)
+      .filter(l => l.cantidad > 0)
+      .sort((a,b) => new Date(a.compra?.fecha||0) - new Date(b.compra?.fecha||0));
+
+    if(!lotes.length){
+      loteSelect.innerHTML = '<option value="">— Sin lotes —</option>';
+      return;
+    }
+
+    loteSelect.innerHTML = '<option value="">— Elegir lote —</option>' +
+      lotes.map(l => {
+        const label = l.compra?.numero_pedido || 'OC-'+l.compra_id?.slice(-4);
+        const fecha = l.compra?.fecha || '';
+        return `<option value="${l.compra_id}">${label} · ${fecha} · cant:${l.cantidad}</option>`;
+      }).join('');
+
+    loteSelect.onchange = () => { row.dataset.compraId = loteSelect.value; };
+  }catch(e){
+    loteSelect.innerHTML = '<option value="">— Error cargando —</option>';
+  }
 }
 
 // ===== BOTTOM NAV =====
