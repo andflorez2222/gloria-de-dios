@@ -2421,6 +2421,20 @@ async function saveVenta(){
       toast(`Stock insuficiente: ${prod.descripcion} (disponible: ${prod.stock||0})`, 'err');
       return;
     }
+    // Validar stock del lote específico si se seleccionó uno
+    if(d.compra_id){
+      const rowEl = [...document.querySelectorAll('#prod-rows .prod-row')]
+        .find(r=>r.dataset.prodId===d.producto_id && r.dataset.compraId===d.compra_id);
+      if(rowEl){
+        const loteSelect = rowEl.querySelector('.plote');
+        const selOpt = loteSelect?.options[loteSelect.selectedIndex];
+        const disponible = parseFloat(selOpt?.dataset?.disponible||Infinity);
+        if(d.cantidad > disponible){
+          toast(`Lote sin suficiente stock: solo hay ${disponible} disponibles`, 'err');
+          return;
+        }
+      }
+    }
   }
 
   if(!detalles.length){ toast('Agrega al menos un producto','err'); return; }
@@ -3707,42 +3721,72 @@ async function cargarLotes(prodId, rowId){
   const loteSelect = row?.querySelector('.plote');
   if(!loteSelect) return;
   try{
-    // Obtener detalle_compras de este producto con datos de la compra
-    const dets = await api('detalle_compras','GET',null,
-      `?producto_id=eq.${prodId}&select=compra_id,cantidad,compras(id,fecha,numero_pedido,proveedor_id)&order=compra_id`);
+    // Cargar en paralelo: lo que entró por compra y lo que ya salió por ventas
+    const [detsCompra, detsVenta] = await Promise.all([
+      api('detalle_compras','GET',null,
+        `?producto_id=eq.${prodId}&select=compra_id,cantidad,compras(id,fecha,numero_pedido)&order=compra_id`),
+      api('detalle_ventas','GET',null,
+        `?producto_id=eq.${prodId}&select=compra_id,cantidad`)
+    ]);
 
-    if(!dets || !dets.length){
+    if(!detsCompra || !detsCompra.length){
       loteSelect.innerHTML = '<option value="">— Sin lotes —</option>';
       return;
     }
 
-    // Agrupar por compra_id y sumar cantidades
-    const lotesMap = {};
-    dets.forEach(d => {
+    // Sumar lo que entró por lote
+    const entradas = {};
+    detsCompra.forEach(d => {
       const cid = d.compra_id;
-      if(!lotesMap[cid]){
-        lotesMap[cid] = { compra_id: cid, cantidad: 0, compra: d.compras };
-      }
-      lotesMap[cid].cantidad += (d.cantidad||0);
+      if(!entradas[cid]) entradas[cid] = { compra_id: cid, entro: 0, compra: d.compras };
+      entradas[cid].entro += (d.cantidad||0);
     });
 
-    const lotes = Object.values(lotesMap)
-      .filter(l => l.cantidad > 0)
+    // Sumar lo que ya salió por lote (ventas anteriores)
+    const salidas = {};
+    (detsVenta||[]).forEach(d => {
+      if(!d.compra_id) return;
+      salidas[d.compra_id] = (salidas[d.compra_id]||0) + (d.cantidad||0);
+    });
+
+    // Stock disponible por lote = entró - ya vendido
+    const lotes = Object.values(entradas)
+      .map(l => ({ ...l, disponible: l.entro - (salidas[l.compra_id]||0) }))
+      .filter(l => l.disponible > 0)
       .sort((a,b) => new Date(a.compra?.fecha||0) - new Date(b.compra?.fecha||0));
 
     if(!lotes.length){
-      loteSelect.innerHTML = '<option value="">— Sin lotes —</option>';
+      loteSelect.innerHTML = '<option value="" disabled>— Sin stock en lotes —</option>';
+      // Deshabilitar el select para que no se pueda elegir
+      loteSelect.disabled = true;
       return;
     }
 
+    loteSelect.disabled = false;
     loteSelect.innerHTML = '<option value="">— Elegir lote —</option>' +
       lotes.map(l => {
         const label = l.compra?.numero_pedido || 'OC-'+l.compra_id?.slice(-4);
         const fecha = l.compra?.fecha || '';
-        return `<option value="${l.compra_id}">${label} · ${fecha} · cant:${l.cantidad}</option>`;
+        const color = l.disponible <= 2 ? '⚠️' : '✅';
+        return `<option value="${l.compra_id}" data-disponible="${l.disponible}">${color} ${label} · ${fecha} · disp: ${l.disponible}</option>`;
       }).join('');
 
-    loteSelect.onchange = () => { row.dataset.compraId = loteSelect.value; };
+    // Al cambiar lote: guardar id Y limitar la cantidad máxima
+    loteSelect.onchange = () => {
+      row.dataset.compraId = loteSelect.value;
+      const selOpt = loteSelect.options[loteSelect.selectedIndex];
+      const disponible = parseFloat(selOpt?.dataset?.disponible||0);
+      const cantInput = row.querySelector('.pcant');
+      if(cantInput && disponible > 0){
+        cantInput.max = disponible;
+        // Si la cantidad actual supera el disponible, ajustar
+        if(parseFloat(cantInput.value) > disponible){
+          cantInput.value = disponible;
+          calcRow(rowId);
+          toast(`Ajustado a máximo disponible: ${disponible}`, 'ok');
+        }
+      }
+    };
   }catch(e){
     loteSelect.innerHTML = '<option value="">— Error cargando —</option>';
   }
