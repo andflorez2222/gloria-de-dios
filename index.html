@@ -3762,9 +3762,8 @@ async function viewFacturaCompra(compraId){
   const dets = await api('detalle_compras','GET',null,`?compra_id=eq.${compraId}`);
   const prov = proveedores.find(x=>x.id===c.proveedor_id)||{};
   const subtotal = dets.reduce((s,d)=>s+d.cantidad*(d.costo_unitario||0),0);
-  const iva = Math.round(subtotal*0.19);
-  const total = subtotal + iva;
-  currentCompraFactura = {c, prov, dets, subtotal, iva, total};
+  const total = subtotal;
+  currentCompraFactura = {c, prov, dets, subtotal, total};
 
   document.getElementById('factura-compra-content').innerHTML = `
     <div class="fact-compra-wrap" id="fact-compra-print">
@@ -3811,7 +3810,6 @@ async function viewFacturaCompra(compraId){
 
         <div class="fcp-totales">
           <div class="fcp-tot-row"><span style="color:var(--ink-soft);">Subtotal:</span><span class="fw7">${fmt(subtotal)}</span></div>
-          <div class="fcp-tot-row"><span style="color:var(--ink-soft);">IVA (19%):</span><span class="fw7">${fmt(iva)}</span></div>
           <div class="fcp-tot-grand"><span>TOTAL:</span><span>${fmt(total)}</span></div>
         </div>
       </div>
@@ -3869,7 +3867,7 @@ async function exportCompraPDF(){
   if(!currentCompraFactura){ toast('Sin datos','err'); return; }
   const {jsPDF} = window.jspdf;
   const doc = new jsPDF({unit:'mm',format:'a4'});
-  const {c,prov,dets,subtotal,iva,total} = currentCompraFactura;
+  const {c,prov,dets,subtotal,total} = currentCompraFactura;
 
   // Header oscuro
   doc.setFillColor(26,17,24);
@@ -3935,11 +3933,7 @@ async function exportCompraPDF(){
   doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
   doc.text('Subtotal:',148,y+5.5); doc.text(fmt(subtotal),196,y+5.5,{align:'right'});
 
-  doc.setFillColor(253,235,216); doc.rect(14,y+9,182,8,'F');
-  doc.setTextColor(196,92,10);
-  doc.text('IVA (19%):',148,y+14.5); doc.text(fmt(iva),196,y+14.5,{align:'right'});
-
-  doc.setFillColor(26,17,24); doc.rect(14,y+18,182,12,'F');
+  doc.setFillColor(26,17,24); doc.rect(14,y+9,182,12,'F');
   doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
   doc.text('TOTAL:',18,y+25.5); doc.text(fmt(total),196,y+25.5,{align:'right'});
 
@@ -3952,7 +3946,7 @@ async function exportCompraPDF(){
 
 async function exportCompraCSV(){
   if(!currentCompraFactura){ toast('Sin datos','err'); return; }
-  const {c,prov,dets,subtotal,iva,total} = currentCompraFactura;
+  const {c,prov,dets,subtotal,total} = currentCompraFactura;
   const rows = [
     [`Orden de Compra: ${c.numero_pedido||'—'}`],
     [`Proveedor: ${prov.nombre||'—'}`],
@@ -3967,7 +3961,6 @@ async function exportCompraCSV(){
   });
   rows.push([]);
   rows.push(['','','','Subtotal', subtotal]);
-  rows.push(['','','','IVA 19%', iva]);
   rows.push(['','','','TOTAL', total]);
   downloadCSV(rows, `OrdenCompra_${c.numero_pedido||c.id?.slice(-6)}.csv`);
   toast('CSV exportado ✓','ok');
