@@ -2170,62 +2170,111 @@ async function renderDashUsuarios(allVentas, allAbonos, mes){
     return;
   }
 
-  // Cargar retiros y ventas frescas con usuario_id
-  let retiros = [], ventasMes = [];
+  // Cargar todos los datos del mes en paralelo
+  let retiros = [], ventasMes = [], comprasMes = [], carteras = [];
   try{
-    [retiros, ventasMes] = await Promise.all([
+    [retiros, ventasMes, comprasMes, carteras] = await Promise.all([
       api('retiros','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mes}-31&order=fecha.desc`),
-      api('ventas','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mes}-31&select=id,usuario_id,total_venta,saldo_pendiente,estado,metodo_pago`)
+      api('ventas','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mes}-31`),
+      api('compras','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mes}-31`),
+      api('ventas','GET',null,`?saldo_pendiente=gt.0&select=id,cliente_id,usuario_id,saldo_pendiente,numero_factura`)
     ]);
-  }catch(e){ retiros=[]; ventasMes=allVentas.filter(v=>v.fecha?.startsWith(mes)); }
+  }catch(e){
+    retiros=[]; ventasMes=allVentas.filter(v=>v.fecha?.startsWith(mes));
+    comprasMes=[]; carteras=[];
+  }
 
   const abonosMes = allAbonos.filter(a=>a.fecha?.startsWith(mes));
+  const sinAsignar = ventasMes.filter(v=>!v.usuario_id);
 
-  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin-bottom:16px;">
+  // Render: sin asignar banner
+  const sinAsignarBanner = sinAsignar.length ? `
+    <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">⚠️</span>
+      <div style="font-size:13px;color:#856404;">
+        <strong>${sinAsignar.length} venta${sinAsignar.length!==1?'s':''} sin usuario asignado</strong> este mes — asígnalas manualmente desde el módulo de Ventas para que aparezcan aquí.
+      </div>
+    </div>` : '';
+
+  el.innerHTML = sinAsignarBanner + `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:16px;">
     ${usuariosList.map(u=>{
       const uVentas = ventasMes.filter(v=>v.usuario_id===u.id);
-      const uTotal = uVentas.reduce((s,v)=>s+(v.total_venta||0),0);
       const uVentaIds = new Set(uVentas.map(v=>v.id));
+      const uTotal = uVentas.reduce((s,v)=>s+(v.total_venta||0),0);
       const uPagadas = uVentas.filter(v=>v.estado==='Pagado').reduce((s,v)=>s+(v.total_venta||0),0);
       const uAbonos = abonosMes.filter(a=>uVentaIds.has(a.venta_id)).reduce((s,a)=>s+(a.monto||0),0);
       const uRecaudado = uPagadas + uAbonos;
+      const uDeuda = carteras.filter(v=>v.usuario_id===u.id).reduce((s,v)=>s+(v.saldo_pendiente||0),0);
+      const uDeudaCount = carteras.filter(v=>v.usuario_id===u.id).length;
       const uRetiros = retiros.filter(r=>r.usuario_id===u.id);
       const uTotalRet = uRetiros.reduce((s,r)=>s+(r.monto||0),0);
       const uBolsillo = uRetiros.filter(r=>r.tipo==='bolsillo').reduce((s,r)=>s+(r.monto||0),0);
-      const saldo = uRecaudado - uBolsillo;
+      const uReinv = uRetiros.filter(r=>r.tipo==='reinversion').reduce((s,r)=>s+(r.monto||0),0);
+      const uGasto = uRetiros.filter(r=>r.tipo==='gasto_negocio').reduce((s,r)=>s+(r.monto||0),0);
+      const saldo = uRecaudado - uTotalRet;
       const pct = uTotal>0?Math.round((uRecaudado/uTotal)*100):0;
+
       return `<div class="card" style="padding:22px;border-top:4px solid var(--rose);">
+        <!-- Header usuario -->
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
           <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--rose),#f06292);display:flex;align-items:center;justify-content:center;font-size:24px;color:white;">👤</div>
-          <div>
+          <div style="flex:1;">
             <div style="font-weight:800;font-size:18px;">${u.nombre}</div>
-            <div style="font-size:11px;color:var(--mist-dark);">${uVentas.length} venta${uVentas.length!==1?'s':''} este mes</div>
+            <div style="font-size:11px;color:var(--mist-dark);">${uVentas.length} venta${uVentas.length!==1?'s':''} · ${uRetiros.length} retiro${uRetiros.length!==1?'s':''} este mes</div>
+          </div>
+          <div style="text-align:right;font-size:10px;color:var(--mist-dark);">
+            <div style="font-size:11px;font-weight:700;color:${saldo>=0?'var(--green)':'#dc2626'};">${saldo>=0?'▲':'▼'} ${fmt(Math.abs(saldo))}</div>
+            <div>saldo neto</div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;margin-bottom:14px;">
+
+        <!-- KPIs grid -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;margin-bottom:14px;">
           <div style="background:var(--rose-pale);padding:12px;border-radius:10px;border:1px solid var(--rose-soft);">
             <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--rose);margin-bottom:4px;">💳 Vendió</div>
             <div style="font-weight:800;color:var(--rose);font-size:16px;">${fmt(uTotal)}</div>
+            <div style="font-size:10px;color:var(--ink-soft);">${uVentas.length} factura${uVentas.length!==1?'s':''}</div>
           </div>
           <div style="background:var(--green-light);padding:12px;border-radius:10px;border:1px solid #bbf7d0;">
             <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--green);margin-bottom:4px;">💚 Recaudó</div>
             <div style="font-weight:800;color:var(--green);font-size:16px;">${fmt(uRecaudado)}</div>
+            <div style="font-size:10px;color:var(--ink-soft);">abonos: ${fmt(uAbonos)}</div>
           </div>
           <div style="background:#fee2e2;padding:12px;border-radius:10px;border:1px solid #fecaca;">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#dc2626;margin-bottom:4px;">💸 Retiró</div>
-            <div style="font-weight:800;color:#dc2626;font-size:16px;">${fmt(uTotalRet)}</div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#dc2626;margin-bottom:4px;">📦 Cartera pendiente</div>
+            <div style="font-weight:800;color:#dc2626;font-size:16px;">${fmt(uDeuda)}</div>
+            <div style="font-size:10px;color:var(--ink-soft);">${uDeudaCount} cliente${uDeudaCount!==1?'s':''} deben</div>
+          </div>
+          <div style="background:#fef3c7;padding:12px;border-radius:10px;border:1px solid #fde68a;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#d97706;margin-bottom:4px;">💸 Retiró</div>
+            <div style="font-weight:800;color:#d97706;font-size:16px;">${fmt(uTotalRet)}</div>
             <div style="font-size:10px;color:var(--ink-soft);">bolsillo: ${fmt(uBolsillo)}</div>
           </div>
-          <div style="background:${saldo>=0?'var(--green-light)':'#fee2e2'};padding:12px;border-radius:10px;border:1px solid ${saldo>=0?'#bbf7d0':'#fecaca'};">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:${saldo>=0?'var(--green)':'#dc2626'};margin-bottom:4px;">${saldo>=0?'✅':'⚠️'} Saldo neto</div>
-            <div style="font-weight:800;color:${saldo>=0?'var(--green)':'#dc2626'};font-size:16px;">${fmt(saldo)}</div>
-          </div>
         </div>
-        <div style="font-size:11px;color:var(--ink-soft);margin-bottom:6px;">Recaudado vs vendido: ${pct}%</div>
-        <div style="background:var(--mist-mid);height:8px;border-radius:4px;overflow:hidden;">
+
+        <!-- Barra recaudado -->
+        <div style="font-size:11px;color:var(--ink-soft);margin-bottom:5px;display:flex;justify-content:space-between;">
+          <span>Recaudado vs vendido</span><span style="font-weight:700;">${pct}%</span>
+        </div>
+        <div style="background:var(--mist-mid);height:8px;border-radius:4px;overflow:hidden;margin-bottom:12px;">
           <div style="width:${Math.min(pct,100)}%;height:100%;background:var(--green);border-radius:4px;transition:width .5s;"></div>
         </div>
-        ${uRetiros.length?`<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">${uRetiros.slice(0,3).map(r=>`<span class="badge b-mist" style="font-size:10px;">💸 ${r.tipo} ${fmt(r.monto)}</span>`).join('')}</div>`:''}
+
+        <!-- Detalle retiros -->
+        ${uRetiros.length?`
+        <div style="border-top:1px solid var(--mist);padding-top:10px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-soft);margin-bottom:7px;">Desglose retiros</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:11px;">
+            ${uBolsillo>0?`<span class="badge b-mist">💸 Bolsillo ${fmt(uBolsillo)}</span>`:''}
+            ${uReinv>0?`<span class="badge b-mist">♻️ Reinversión ${fmt(uReinv)}</span>`:''}
+            ${uGasto>0?`<span class="badge b-mist">🧾 Gasto neg. ${fmt(uGasto)}</span>`:''}
+          </div>
+          ${uRetiros.slice(0,4).map(r=>`
+            <div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-bottom:1px solid var(--mist);color:var(--ink-soft);">
+              <span>${r.fecha} · ${r.tipo}</span>
+              <span style="font-weight:700;color:#d97706;">${fmt(r.monto)}</span>
+            </div>`).join('')}
+        </div>`:'<div style="font-size:11px;color:var(--mist-dark);text-align:center;padding:8px 0;">Sin retiros este mes</div>'}
       </div>`;
     }).join('')}
   </div>`;
@@ -2314,9 +2363,10 @@ function renderVentas(data){
   const el = document.getElementById('ventas-list');
   if(!data.length){ el.innerHTML='<div class="empty"><div class="e-ico">🧾</div><p>Sin ventas registradas</p></div>'; return; }
   el.innerHTML = `<table>
-    <thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Método</th><th>Total</th><th>Abonado</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
+    <thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Método</th><th>Total</th><th>Abonado</th><th>Saldo</th><th>Estado</th><th>Quién</th><th></th></tr></thead>
     <tbody>${data.map(v=>{
       const c = clientes.find(x=>x.id===v.cliente_id);
+      const u = usuariosList.find(x=>x.id===v.usuario_id);
       const abonado = (v.total_venta||0)-(v.saldo_pendiente||0);
       return `<tr>
         <td class="fw7 c-rose">#${v.numero_factura}</td>
@@ -2327,6 +2377,11 @@ function renderVentas(data){
         <td class="c-green">${fmt(abonado)}</td>
         <td class="${v.saldo_pendiente>0?'c-amber fw7':'c-green'}">${fmt(v.saldo_pendiente)}</td>
         <td><span class="badge ${v.estado==='Pagado'?'b-green':'b-amber'}">${v.estado||'Pendiente'}</span></td>
+        <td>
+          <span class="badge b-mist" style="cursor:pointer;" title="Cambiar quién realizó esta venta" onclick="asignarUsuarioVenta('${v.id}','${v.usuario_id||''}')">
+            ${u?u.nombre:'<span style="color:#c2185b;">⚠️ sin asignar</span>'}
+          </span>
+        </td>
         <td style="text-align:right;white-space:nowrap;">
           <button class="btn btn-xs btn-ghost" title="Ver factura" onclick="viewFactura('${v.id}')">🧾</button>
           <button class="btn btn-xs btn-ghost" title="Registrar abono" onclick="openAbonoModal('${v.id}')">💰</button>
@@ -2335,6 +2390,25 @@ function renderVentas(data){
         </td>
       </tr>`;
     }).join('')}</tbody></table>`;
+}
+
+async function asignarUsuarioVenta(ventaId, currentUsuarioId){
+  if(!usuariosList.length){ try{ usuariosList = await api('usuarios','GET',null,'?order=nombre'); }catch(e){} }
+  if(!usuariosList.length){ toast('No hay usuarios cargados','err'); return; }
+  const opciones = ['— Sin asignar —', ...usuariosList.map(u=>u.nombre)];
+  const selIdx = usuariosList.findIndex(u=>u.id===currentUsuarioId);
+  const sel = prompt(`¿Quién hizo esta venta?\n\n${opciones.map((o,i)=>`${i}. ${o}`).join('\n')}\n\nEscribe el número:`);
+  if(sel===null) return;
+  const idx = parseInt(sel);
+  if(isNaN(idx)||idx<0||idx>=opciones.length){ toast('Opción inválida','err'); return; }
+  const nuevoId = idx===0 ? null : usuariosList[idx-1].id;
+  try{
+    await api('ventas','PATCH',{usuario_id:nuevoId},`?id=eq.${ventaId}`);
+    const v = ventas.find(x=>x.id===ventaId);
+    if(v) v.usuario_id = nuevoId;
+    renderVentas(ventas);
+    toast('Usuario actualizado ✓','ok');
+  }catch(e){ toast('Error al actualizar','err'); }
 }
 
 function filterVentas(){
@@ -2857,104 +2931,76 @@ function sendWA(){
 
 async function exportPDF(){
   if(!currentFactura) return;
-  const {jsPDF} = window.jspdf;
-  const doc = new jsPDF({unit:'mm',format:'a4'});
   const {v,c,detalles,total,abonado} = currentFactura;
 
-  // Header background
-  doc.setFillColor(232,68,122);
-  doc.rect(0,0,210,38,'F');
-
-  // Logo text
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(24); doc.setFont('helvetica','bold');
-  doc.text('La Gloria de Dios',14,18);
-  doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text('PRODUCTOS DE ASEO',14,25);
-  doc.text('313 863 59 17  ·  300 593 9895  ·  glomaleon@leon2000.com',14,31);
-
-  // Factura info
-  doc.setFontSize(16); doc.setFont('helvetica','bold');
-  doc.text(`Factura #${v.numero_factura}`,196,18,{align:'right'});
-  doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text(v.fecha,196,25,{align:'right'});
-  doc.text(v.estado||'Pendiente',196,31,{align:'right'});
-
-  // Cliente box
-  doc.setTextColor(0,0,0);
-  doc.setFillColor(254,240,245);
-  doc.roundedRect(14,44,182,30,3,3,'F');
-  doc.setDrawColor(232,68,122);
-  doc.setLineWidth(0.8);
-  doc.line(14,44,14,74);
-
-  doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(181,35,79);
-  doc.text('CLIENTE',18,51); doc.text('DIRECCIÓN',100,51);
-  doc.text('TELÉFONO',18,62); doc.text('MÉTODO DE PAGO',100,62);
-
-  doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0); doc.setFontSize(11);
-  doc.text(c?.nombre||'—',18,58);
-  doc.setFontSize(9);
-  doc.text(c?.direccion||'—',100,58);
-  doc.text(c?.telefono||'—',18,69);
-  doc.text(v.metodo_pago||'—',100,69);
-
-  if(v.notas){
-    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(181,35,79);
-    doc.text('NOTAS:',18,76);
-    doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
-    doc.text(v.notas,35,76);
+  // Load html2canvas if not already loaded
+  if(!window.html2canvas){
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      s.onload=res; s.onerror=rej;
+      document.head.appendChild(s);
+    });
   }
 
-  // Tabla
-  const tableData = detalles.map(d=>{
-    const p = productos.find(x=>x.id===d.producto_id);
-    return [p?.descripcion||'Producto', `${d.cantidad} ${p?.unidad||''}`, fmt(d.precio_unitario), fmt(d.cantidad*d.precio_unitario)];
-  });
+  const el = document.getElementById('fact-print');
+  if(!el){ toast('Vista previa no encontrada','err'); return; }
 
-  doc.autoTable({
-    startY: v.notas ? 82 : 80,
-    head:[['Producto','Cant.','Precio Unit.','Subtotal']],
-    body: tableData,
-    headStyles:{fillColor:[232,68,122],textColor:255,fontSize:9,fontStyle:'bold'},
-    bodyStyles:{fontSize:9},
-    columnStyles:{1:{halign:'center'},2:{halign:'right'},3:{halign:'right'}},
-    alternateRowStyles:{fillColor:[252,248,251]},
-    margin:{left:14,right:14}
-  });
+  toast('Generando PDF…','ok');
 
-  const y = doc.lastAutoTable.finalY + 5;
+  // Temporarily expand for capture
+  const orig = el.style.maxWidth;
+  el.style.maxWidth = '720px';
+  el.style.width = '720px';
 
-  doc.setFillColor(242,237,240);
-  doc.rect(14,y,182,8,'F');
-  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
-  doc.text('Subtotal:',150,y+5.5);
-  doc.text(fmt(total),196,y+5.5,{align:'right'});
+  try{
+    const canvas = await html2canvas(el,{
+      scale:2,
+      useCORS:true,
+      backgroundColor:'#ffffff',
+      logging:false,
+      windowWidth:800
+    });
 
-  if(abonado>0){
-    doc.setFillColor(212,244,229);
-    doc.rect(14,y+9,182,8,'F');
-    doc.setTextColor(26,138,82);
-    doc.text('Total abonado:',150,y+14.5);
-    doc.text(fmt(abonado),196,y+14.5,{align:'right'});
+    el.style.maxWidth = orig;
+    el.style.width = '';
+
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
+    const pageW = 210;
+    const pageH = 297;
+    const margin = 10;
+    const imgW = pageW - margin*2;
+    const imgH = (canvas.height * imgW) / canvas.width;
+
+    if(imgH <= pageH - margin*2){
+      doc.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',margin,margin,imgW,imgH);
+    } else {
+      // Multi-page if content is too long
+      let yPos = 0;
+      const pageImgH = pageH - margin*2;
+      const srcH = (pageImgH * canvas.width) / imgW;
+      while(yPos < canvas.height){
+        if(yPos>0) doc.addPage();
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = canvas.width;
+        tmpCanvas.height = Math.min(srcH, canvas.height - yPos);
+        tmpCanvas.getContext('2d').drawImage(canvas, 0, yPos, tmpCanvas.width, tmpCanvas.height, 0, 0, tmpCanvas.width, tmpCanvas.height);
+        const slice = tmpCanvas.toDataURL('image/jpeg',0.95);
+        const sliceH = (tmpCanvas.height * imgW) / canvas.width;
+        doc.addImage(slice,'JPEG',margin,margin,imgW,sliceH);
+        yPos += srcH;
+      }
+    }
+
+    doc.save(`Factura_${v.numero_factura}_${(c?.nombre||'cliente').replace(/\s/g,'_')}.pdf`);
+    toast('PDF exportado ✓','ok');
+  }catch(e){
+    el.style.maxWidth = orig;
+    el.style.width = '';
+    console.error(e);
+    toast('Error al generar PDF','err');
   }
-
-  doc.setFillColor(232,68,122);
-  doc.rect(14,y+(abonado>0?18:9),182,12,'F');
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold'); doc.setFontSize(12);
-  const saldoY = y+(abonado>0?25.5:16.5);
-  doc.text('SALDO A PAGAR:',18,saldoY);
-  doc.text(fmt(v.saldo_pendiente||0),196,saldoY,{align:'right'});
-
-  // Footer
-  doc.setTextColor(160,160,160);
-  doc.setFontSize(8); doc.setFont('helvetica','normal');
-  doc.text('¡Gracias por su compra! · La Gloria de Dios · glomaleon@leon2000.com · 313 863 59 17',105,287,{align:'center'});
-  doc.text(`Factura #${v.numero_factura}`,14,287);
-
-  doc.save(`Factura_${v.numero_factura}_${(c?.nombre||'cliente').replace(/\s/g,'_')}.pdf`);
-  toast('PDF exportado ✓','ok');
 }
 
 // ===== REPORTES =====
