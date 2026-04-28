@@ -1145,9 +1145,9 @@ tr.drag-over td { background: var(--rose-soft) !important; }
 
       <!-- Tabs -->
       <div class="dash-tab-bar">
-        <div class="dash-tab active" onclick="switchDashTab('general')">📊 General</div>
-        <div class="dash-tab" onclick="switchDashTab('usuarios')">👥 Por usuario</div>
-        <div class="dash-tab" onclick="switchDashTab('flujo')">💰 Flujo de caja</div>
+        <button class="dash-tab active" onclick="switchDashTab('general')">📊 General</button>
+        <button class="dash-tab" onclick="switchDashTab('usuarios')">👥 Por usuario</button>
+        <button class="dash-tab" onclick="switchDashTab('flujo')">💰 Flujo de caja</button>
       </div>
 
       <!-- TAB: General -->
@@ -2161,60 +2161,71 @@ async function loadDashboard(){
 
 async function renderDashUsuarios(allVentas, allAbonos, mes){
   const el = document.getElementById('ds-usuarios-content');
+  el.innerHTML = '<div class="loading"><div class="spin"></div>Cargando...</div>';
   if(!usuariosList.length){
     try{ usuariosList = await api('usuarios','GET',null,'?order=nombre'); } catch(e){ usuariosList=[]; }
   }
-  let retiros = [];
-  try{ retiros = await api('retiros','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mes}-31&order=fecha.desc`); }catch(e){}
-
   if(!usuariosList.length){
-    el.innerHTML = '<div class="empty"><div class="e-ico">👥</div><p>No hay usuarios registrados en la tabla <b>usuarios</b> de Supabase.</p></div>';
+    el.innerHTML = '<div class="empty"><div class="e-ico">👥</div><p>No hay usuarios en la tabla <b>usuarios</b>.</p></div>';
     return;
   }
 
-  const vMes = allVentas.filter(v=>v.fecha?.startsWith(mes));
+  // Cargar retiros y ventas frescas con usuario_id
+  let retiros = [], ventasMes = [];
+  try{
+    [retiros, ventasMes] = await Promise.all([
+      api('retiros','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mes}-31&order=fecha.desc`),
+      api('ventas','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mes}-31&select=id,usuario_id,total_venta,saldo_pendiente,estado,metodo_pago`)
+    ]);
+  }catch(e){ retiros=[]; ventasMes=allVentas.filter(v=>v.fecha?.startsWith(mes)); }
 
-  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px;">
+  const abonosMes = allAbonos.filter(a=>a.fecha?.startsWith(mes));
+
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin-bottom:16px;">
     ${usuariosList.map(u=>{
-      const uVentas = vMes.filter(v=>v.usuario_id===u.id);
+      const uVentas = ventasMes.filter(v=>v.usuario_id===u.id);
       const uTotal = uVentas.reduce((s,v)=>s+(v.total_venta||0),0);
-      const uRecaudado = uVentas.filter(v=>v.estado==='Pagado').reduce((s,v)=>s+(v.total_venta||0),0);
-      const uAbonos = allAbonos.filter(a=>a.fecha?.startsWith(mes));
-      // Aproximar abonos por usuario via ventas del usuario
       const uVentaIds = new Set(uVentas.map(v=>v.id));
-      const uAbonosMonto = uAbonos.filter(a=>uVentaIds.has(a.venta_id)).reduce((s,a)=>s+(a.monto||0),0);
+      const uPagadas = uVentas.filter(v=>v.estado==='Pagado').reduce((s,v)=>s+(v.total_venta||0),0);
+      const uAbonos = abonosMes.filter(a=>uVentaIds.has(a.venta_id)).reduce((s,a)=>s+(a.monto||0),0);
+      const uRecaudado = uPagadas + uAbonos;
       const uRetiros = retiros.filter(r=>r.usuario_id===u.id);
-      const uTotalRetiros = uRetiros.reduce((s,r)=>s+(r.monto||0),0);
+      const uTotalRet = uRetiros.reduce((s,r)=>s+(r.monto||0),0);
       const uBolsillo = uRetiros.filter(r=>r.tipo==='bolsillo').reduce((s,r)=>s+(r.monto||0),0);
-      const saldo = (uRecaudado + uAbonosMonto) - uBolsillo;
-      return `<div class="card" style="padding:20px;">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-          <div style="width:48px;height:48px;border-radius:50%;background:var(--rose-soft);display:flex;align-items:center;justify-content:center;font-size:22px;">👤</div>
-          <div><div style="font-weight:800;font-size:16px;">${u.nombre}</div><div style="font-size:11px;color:var(--mist-dark);">${u.email||''}</div></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">
-          <div style="background:var(--mist);padding:10px;border-radius:8px;">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--mist-dark);">Ventas</div>
-            <div style="font-weight:800;color:var(--rose);">${fmt(uTotal)}</div>
-            <div style="font-size:11px;color:var(--ink-soft);">${uVentas.length} facturas</div>
-          </div>
-          <div style="background:var(--green-light);padding:10px;border-radius:8px;">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--mist-dark);">Recaudó</div>
-            <div style="font-weight:800;color:var(--green);">${fmt(uRecaudado+uAbonosMonto)}</div>
-            <div style="font-size:11px;color:var(--ink-soft);">efectivo cobrado</div>
-          </div>
-          <div style="background:#fee2e2;padding:10px;border-radius:8px;">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--mist-dark);">Retiró</div>
-            <div style="font-weight:800;color:#dc2626;">${fmt(uTotalRetiros)}</div>
-            <div style="font-size:11px;color:var(--ink-soft);">💸 bolsillo: ${fmt(uBolsillo)}</div>
-          </div>
-          <div style="background:${saldo>=0?'var(--green-light)':'#fee2e2'};padding:10px;border-radius:8px;">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--mist-dark);">Saldo neto</div>
-            <div style="font-weight:800;color:${saldo>=0?'var(--green)':'#dc2626'};">${fmt(saldo)}</div>
-            <div style="font-size:11px;color:var(--ink-soft);">${saldo>=0?'✅ en positivo':'⚠️ retiró más'}</div>
+      const saldo = uRecaudado - uBolsillo;
+      const pct = uTotal>0?Math.round((uRecaudado/uTotal)*100):0;
+      return `<div class="card" style="padding:22px;border-top:4px solid var(--rose);">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
+          <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--rose),#f06292);display:flex;align-items:center;justify-content:center;font-size:24px;color:white;">👤</div>
+          <div>
+            <div style="font-weight:800;font-size:18px;">${u.nombre}</div>
+            <div style="font-size:11px;color:var(--mist-dark);">${uVentas.length} venta${uVentas.length!==1?'s':''} este mes</div>
           </div>
         </div>
-        ${uRetiros.length?`<div style="margin-top:12px;font-size:12px;color:var(--ink-soft);">Últimos retiros: ${uRetiros.slice(0,2).map(r=>`<span class="badge b-mist">${r.tipo} ${fmt(r.monto)}</span>`).join(' ')}</div>`:''}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;margin-bottom:14px;">
+          <div style="background:var(--rose-pale);padding:12px;border-radius:10px;border:1px solid var(--rose-soft);">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--rose);margin-bottom:4px;">💳 Vendió</div>
+            <div style="font-weight:800;color:var(--rose);font-size:16px;">${fmt(uTotal)}</div>
+          </div>
+          <div style="background:var(--green-light);padding:12px;border-radius:10px;border:1px solid #bbf7d0;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--green);margin-bottom:4px;">💚 Recaudó</div>
+            <div style="font-weight:800;color:var(--green);font-size:16px;">${fmt(uRecaudado)}</div>
+          </div>
+          <div style="background:#fee2e2;padding:12px;border-radius:10px;border:1px solid #fecaca;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#dc2626;margin-bottom:4px;">💸 Retiró</div>
+            <div style="font-weight:800;color:#dc2626;font-size:16px;">${fmt(uTotalRet)}</div>
+            <div style="font-size:10px;color:var(--ink-soft);">bolsillo: ${fmt(uBolsillo)}</div>
+          </div>
+          <div style="background:${saldo>=0?'var(--green-light)':'#fee2e2'};padding:12px;border-radius:10px;border:1px solid ${saldo>=0?'#bbf7d0':'#fecaca'};">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:${saldo>=0?'var(--green)':'#dc2626'};margin-bottom:4px;">${saldo>=0?'✅':'⚠️'} Saldo neto</div>
+            <div style="font-weight:800;color:${saldo>=0?'var(--green)':'#dc2626'};font-size:16px;">${fmt(saldo)}</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--ink-soft);margin-bottom:6px;">Recaudado vs vendido: ${pct}%</div>
+        <div style="background:var(--mist-mid);height:8px;border-radius:4px;overflow:hidden;">
+          <div style="width:${Math.min(pct,100)}%;height:100%;background:var(--green);border-radius:4px;transition:width .5s;"></div>
+        </div>
+        ${uRetiros.length?`<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">${uRetiros.slice(0,3).map(r=>`<span class="badge b-mist" style="font-size:10px;">💸 ${r.tipo} ${fmt(r.monto)}</span>`).join('')}</div>`:''}
       </div>`;
     }).join('')}
   </div>`;
@@ -2222,13 +2233,15 @@ async function renderDashUsuarios(allVentas, allAbonos, mes){
 
 async function renderDashFlujo(allVentas, allAbonos, allCompras, mes){
   const el = document.getElementById('ds-flujo-content');
+  el.innerHTML = '<div class="loading"><div class="spin"></div>Cargando...</div>';
   let retiros = [];
-  try{ retiros = await api('retiros','GET',null,'?order=fecha.desc&limit=200'); }catch(e){}
+  try{ retiros = await api('retiros','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mes}-31&order=fecha.desc`); }catch(e){}
+  if(!usuariosList.length){ try{ usuariosList = await api('usuarios','GET',null,'?order=nombre'); }catch(e){} }
 
   const vMes = allVentas.filter(v=>v.fecha?.startsWith(mes));
   const cMes = allCompras.filter(c=>c.fecha?.startsWith(mes));
   const abonosMes = allAbonos.filter(a=>a.fecha?.startsWith(mes));
-  const retirosMes = retiros.filter(r=>r.fecha?.startsWith(mes));
+  const retirosMes = retiros; // ya filtrado por mes en la query
 
   const entradas = vMes.filter(v=>v.estado==='Pagado'&&v.metodo_pago!=='Crédito (Fiado)').reduce((s,v)=>s+(v.total_venta||0),0)
     + abonosMes.reduce((s,a)=>s+(a.monto||0),0);
@@ -2674,6 +2687,30 @@ function filterClientes(){
   renderClientes(_clientesFull.filter(c=>c.nombre?.toLowerCase().includes(q)||c.telefono?.includes(q)));
 }
 
+// ===== NÚMERO A LETRAS =====
+function numeroALetras(n){
+  const u=['','un','dos','tres','cuatro','cinco','seis','siete','ocho','nueve',
+    'diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve'];
+  const d=['','','veinte','treinta','cuarenta','cincuenta','sesenta','setenta','ochenta','noventa'];
+  const c=['','cien','doscientos','trescientos','cuatrocientos','quinientos','seiscientos','setecientos','ochocientos','novecientos'];
+  if(n===0) return 'cero';
+  if(n<0) return 'menos '+numeroALetras(-n);
+  let res='';
+  if(n>=1000000){ res+=numeroALetras(Math.floor(n/1000000))+' millón '; n%=1000000; }
+  if(n>=1000){ const m=Math.floor(n/1000); res+=(m===1?'mil ':numeroALetras(m)+' mil '); n%=1000; }
+  if(n>=100){ res+=c[Math.floor(n/100)]+' '; n%=100; if(n>0&&c[Math.floor(n/100)]==='cien') res=res.replace('cien ','ciento '); }
+  if(n>=20){ res+=d[Math.floor(n/10)]; n%=10; if(n>0) res+='iuno '.includes(n+'')?'i'+u[n]:' y '+u[n]; }
+  else if(n>0) res+=u[n];
+  return res.trim();
+}
+function montoEnLetras(n){
+  const miles=Math.floor(n/1000);
+  const resto=Math.round(n%1000);
+  let txt=numeroALetras(miles)+' mil';
+  if(resto>0) txt+=' '+numeroALetras(resto);
+  return txt.trim().charAt(0).toUpperCase()+txt.trim().slice(1)+' pesos';
+}
+
 // ===== FACTURA =====
 async function viewFactura(ventaId){
   if(!clientes.length) clientes = await api('clientes','GET',null,'?order=nombre');
@@ -2697,81 +2734,105 @@ async function viewFactura(ventaId){
 
   currentFactura = {v, c, detalles, total, abonado, prevAbonos};
 
+  const saldoEnLetras = (v.saldo_pendiente||0)>0 ? montoEnLetras(v.saldo_pendiente||0) : '';
+
   document.getElementById('factura-content').innerHTML = `
-    <div class="factura-wrap" id="fact-print">
-      <div class="fact-top">
-        <div class="fact-brand">
-          <h1>La Gloria de Dios</h1>
-          <p>Productos de Aseo</p>
-          <div class="contact">
-            📱 313 863 59 17 &nbsp;·&nbsp; 300 593 9895<br>
-            ✉️ glomaleon@leon2000.com
+    <div class="factura-wrap" id="fact-print" style="font-family:'Plus Jakarta Sans',sans-serif;max-width:680px;margin:0 auto;">
+
+      <!-- HEADER ROSADO -->
+      <div style="background:linear-gradient(135deg,#c2185b 0%,#e91e8c 50%,#f06292 100%);padding:28px 32px;border-radius:16px 16px 0 0;color:white;display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;opacity:.8;margin-bottom:6px;">✨ Productos de Aseo</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:700;line-height:1.1;">La Gloria<br>de Dios</div>
+          <div style="margin-top:12px;font-size:12px;opacity:.85;line-height:1.8;">
+            🫧 Limpieza que transforma tu hogar<br>
+            📱 313 863 59 17 · 300 593 9895
           </div>
         </div>
-        <div class="fact-num">
-          <div class="num">Factura #${v.numero_factura}</div>
-          <div class="date">📅 ${v.fecha}</div>
-          <div style="margin-top:8px;">
-            <span class="badge ${v.estado==='Pagado'?'b-green':'b-amber'}">${v.estado||'Pendiente'}</span>
+        <div style="text-align:right;">
+          <div style="background:rgba(255,255,255,.15);border-radius:12px;padding:14px 18px;backdrop-filter:blur(4px);">
+            <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;opacity:.8;">FACTURA</div>
+            <div style="font-size:28px;font-weight:800;">#${v.numero_factura}</div>
+            <div style="font-size:12px;opacity:.85;margin-top:4px;">📅 ${v.fecha}</div>
+            <div style="margin-top:8px;">
+              <span style="background:${v.estado==='Pagado'?'rgba(134,239,172,.3)':'rgba(253,224,71,.3)'};color:white;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid rgba(255,255,255,.3);">${v.estado==='Pagado'?'✅ PAGADO':'⏳ PENDIENTE'}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="fact-cliente">
-        <div><div class="lbl">Cliente</div><div class="val">${c?.nombre||'—'}</div></div>
-        <div><div class="lbl">Teléfono</div><div class="val">${c?.telefono||'—'}</div></div>
-        <div><div class="lbl">Dirección</div><div class="val">${c?.direccion||'—'}</div></div>
-        <div><div class="lbl">Método de pago</div><div class="val">${v.metodo_pago||'—'}</div></div>
-        ${v.notas?`<div style="grid-column:1/-1"><div class="lbl">Notas</div><div class="val">${v.notas}</div></div>`:''}
+      <!-- BUBBLES DECORATIVOS -->
+      <div style="background:#fce4ec;padding:16px 32px;display:flex;gap:8px;align-items:center;border-left:4px solid #e91e8c;">
+        <div style="font-size:20px;">🧴</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:#c2185b;">${c?.nombre||'Cliente'}</div>
+          <div style="font-size:12px;color:#880e4f;opacity:.8;">${c?.telefono?'📱 '+c.telefono+' ':''} ${c?.direccion?'📍 '+c.direccion:''}</div>
+        </div>
+        <div style="margin-left:auto;font-size:12px;color:#880e4f;">Método: <strong>${v.metodo_pago||'—'}</strong></div>
       </div>
 
-      <table class="fact-table">
-        <thead><tr>
-          <th>Producto</th><th style="text-align:center;">Cant.</th>
-          <th style="text-align:right;">Precio Unit.</th><th style="text-align:right;">Subtotal</th>
-          <th style="text-align:center;font-size:10px;color:var(--mist-dark);">Pedido</th>
-        </tr></thead>
-        <tbody>${detalles.map(d=>{
-          const p = productos.find(x=>x.id===d.producto_id);
-          const comp = d.compra_id ? comprasMap[d.compra_id] : null;
-          const loteLabel = comp ? (comp.numero_pedido||'OC-'+comp.id?.slice(-4)) : '—';
-          return `<tr>
-            <td>${p?.descripcion||'Producto'}</td>
-            <td style="text-align:center;">${d.cantidad} ${p?.unidad||'und'}</td>
-            <td style="text-align:right;">${fmt(d.precio_unitario)}</td>
-            <td style="text-align:right;">${fmt(d.cantidad*d.precio_unitario)}</td>
-            <td style="text-align:center;"><span class="badge b-mist" style="font-size:10px;">${loteLabel}</span></td>
-          </tr>`;
-        }).join('')}</tbody>
-      </table>
+      <!-- TABLA PRODUCTOS -->
+      <div style="padding:0 0 0 0;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:#f8bbd0;">
+              <th style="padding:10px 14px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#880e4f;">🧹 Producto</th>
+              <th style="padding:10px 8px;text-align:center;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#880e4f;">Cant.</th>
+              <th style="padding:10px 8px;text-align:right;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#880e4f;">Precio</th>
+              <th style="padding:10px 14px;text-align:right;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#880e4f;">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${detalles.map((d,i)=>{
+              const p = productos.find(x=>x.id===d.producto_id);
+              const comp = d.compra_id ? comprasMap[d.compra_id] : null;
+              const lote = comp?.fecha ? `<div style="font-size:10px;color:#c2185b;opacity:.7;">📦 lote ${comp.fecha}</div>` : '';
+              return `<tr style="background:${i%2===0?'white':'#fce4ec08'};">
+                <td style="padding:11px 14px;border-bottom:1px solid #fce4ec;">
+                  <div style="font-weight:600;color:#3d0026;">${p?.descripcion||'Producto'}</div>
+                  ${lote}
+                </td>
+                <td style="padding:11px 8px;text-align:center;border-bottom:1px solid #fce4ec;color:#880e4f;font-weight:700;">${d.cantidad} <span style="font-size:10px;font-weight:400;">${p?.unidad||'und'}</span></td>
+                <td style="padding:11px 8px;text-align:right;border-bottom:1px solid #fce4ec;color:#555;">${fmt(d.precio_unitario)}</td>
+                <td style="padding:11px 14px;text-align:right;border-bottom:1px solid #fce4ec;font-weight:700;color:#c2185b;">${fmt(d.cantidad*d.precio_unitario)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
 
-      <div class="fact-totales">
-        <div class="fact-tot-row">
-          <span style="color:var(--ink-soft);">Subtotal productos:</span>
-          <span class="fw7">${fmt(total)}</span>
+      <!-- TOTALES -->
+      <div style="background:#fce4ec;padding:20px 24px;border-top:2px solid #f48fb1;">
+        ${abonado>0?`<div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;color:#555;">
+          <span>Subtotal:</span><span>${fmt(total)}</span>
         </div>
-        ${abonado>0?`<div class="fact-tot-row" style="color:var(--green);">
-          <span>Total abonado:</span><span class="fw7">${fmt(abonado)}</span>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;color:#388e3c;font-weight:600;">
+          <span>✅ Total abonado:</span><span>${fmt(abonado)}</span>
         </div>`:''}
-        <div class="fact-tot-grand">
-          <span>SALDO A PAGAR:</span>
-          <span>${fmt(v.saldo_pendiente||0)}</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;border-top:2px dashed #f48fb1;margin-top:8px;">
+          <span style="font-size:15px;font-weight:800;color:#c2185b;">SALDO A PAGAR:</span>
+          <span style="font-size:24px;font-weight:900;color:#c2185b;">${fmt(v.saldo_pendiente||0)}</span>
         </div>
+        ${saldoEnLetras?`<div style="font-size:11px;color:#880e4f;font-style:italic;text-align:right;margin-top:4px;">Son: ${saldoEnLetras}</div>`:''}
       </div>
 
+      <!-- HISTORIAL ABONOS -->
       ${prevAbonos.length?`
-        <div style="margin-top:16px;">
-          <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--mist-dark);margin-bottom:8px;">Historial de abonos</div>
+        <div style="padding:16px 24px;background:white;border-top:1px solid #fce4ec;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#c2185b;margin-bottom:10px;">📋 Historial de abonos</div>
           ${prevAbonos.map(a=>`
-            <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--mist);">
-              <span>${a.fecha} · ${a.metodo}</span><span class="c-green fw7">${fmt(a.monto)}</span>
+            <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid #fce4ec;">
+              <span style="color:#555;">📅 ${a.fecha} · ${a.metodo||'—'}</span>
+              <span style="color:#388e3c;font-weight:700;">${fmt(a.monto)}</span>
             </div>`).join('')}
         </div>`:''}
 
-      <div class="fact-foot">
-        🌟 ¡Gracias por su compra! Productos de aseo de la mejor calidad.<br>
-        WhatsApp: <strong>313 863 59 17</strong> &nbsp;·&nbsp; <strong>300 593 9895</strong><br>
-        glomaleon@leon2000.com
+      <!-- FOOTER -->
+      <div style="background:linear-gradient(135deg,#c2185b,#e91e8c);padding:20px 32px;border-radius:0 0 16px 16px;text-align:center;color:white;">
+        <div style="font-size:20px;margin-bottom:6px;">🫧🧴🪣✨</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;">¡Gracias por confiar en La Gloria de Dios!</div>
+        <div style="font-size:11px;opacity:.85;">La limpieza de tu hogar es nuestra pasión 💕</div>
+        <div style="font-size:11px;margin-top:8px;opacity:.9;">📱 313 863 59 17 · 300 593 9895 &nbsp;|&nbsp; glomaleon@leon2000.com</div>
       </div>
     </div>`;
   openModal('m-factura');
