@@ -2170,13 +2170,18 @@ async function renderDashUsuarios(allVentas, allAbonos, mes){
     return;
   }
 
+  // Calcular último día real del mes
+  const [y,m] = mes.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  const mesEnd = `${mes}-${String(lastDay).padStart(2,'0')}`;
+
   // Cargar todos los datos del mes en paralelo
   let retiros = [], ventasMes = [], comprasMes = [], carteras = [];
   try{
     [retiros, ventasMes, comprasMes, carteras] = await Promise.all([
-      api('retiros','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mes}-31&order=fecha.desc`),
-      api('ventas','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mes}-31`),
-      api('compras','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mes}-31`),
+      api('retiros','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mesEnd}&order=fecha.desc`),
+      api('ventas','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mesEnd}`),
+      api('compras','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mesEnd}`),
       api('ventas','GET',null,`?saldo_pendiente=gt.0&select=id,cliente_id,usuario_id,saldo_pendiente,numero_factura`)
     ]);
   }catch(e){
@@ -2283,8 +2288,12 @@ async function renderDashUsuarios(allVentas, allAbonos, mes){
 async function renderDashFlujo(allVentas, allAbonos, allCompras, mes){
   const el = document.getElementById('ds-flujo-content');
   el.innerHTML = '<div class="loading"><div class="spin"></div>Cargando...</div>';
+  // Calcular último día real del mes
+  const [y,m] = mes.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  const mesEnd = `${mes}-${String(lastDay).padStart(2,'0')}`;
   let retiros = [];
-  try{ retiros = await api('retiros','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mes}-31&order=fecha.desc`); }catch(e){}
+  try{ retiros = await api('retiros','GET',null,`?fecha=gte.${mes}-01&fecha=lte.${mesEnd}&order=fecha.desc`); }catch(e){}
   if(!usuariosList.length){ try{ usuariosList = await api('usuarios','GET',null,'?order=nombre'); }catch(e){} }
 
   const vMes = allVentas.filter(v=>v.fecha?.startsWith(mes));
@@ -3663,6 +3672,17 @@ async function saveRetiro(){
     cacheClear('retiros');
     cacheClear('dashboard');
     cacheClear('flujo');
+    // Forzar re-render del tab activo con datos frescos
+    if(dashCurrentTab==='flujo'){
+      const mes = document.getElementById('dash-mes')?.value || new Date().toISOString().slice(0,7);
+      const allVentas = ventas;
+      const allAbonos = abonos;
+      const allCompras = compras;
+      await renderDashFlujo(allVentas, allAbonos, allCompras, mes);
+    } else if(dashCurrentTab==='usuarios'){
+      const mes = document.getElementById('dash-mes')?.value || new Date().toISOString().slice(0,7);
+      await renderDashUsuarios(ventas, abonos, mes);
+    }
     loadRetiros();
     loadDashboard();
   }catch(e){ toast(e.message,'err'); }
