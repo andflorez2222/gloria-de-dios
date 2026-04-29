@@ -3740,11 +3740,7 @@ async function delRetiro(id){
   loadDashboard();
 }
 
-</script>
-</body>
-</html>
-<script>
-// ===== AUTOCOMPLETE PRODUCTOS =====
+
 // ===== AUTOCOMPLETE PRODUCTOS =====
 let _acTipo = {}; // guarda el tipo por rowId
 
@@ -3985,12 +3981,352 @@ function closeMoreMenu(){
 }
 
 // Override showPage to also update bottom nav
-const _showPage = showPage;
-// patch setActiveNav into showPage
 const origShowPage = showPage;
 window.showPage = function(name){
   origShowPage(name);
   setActiveNav(name);
   closeMoreMenu();
 };
+
+// ===== CLIENTES =====
+function openClienteModal(){
+  document.getElementById('m-cli-title').textContent = 'Nuevo Cliente';
+  document.getElementById('cli-id').value = '';
+  document.getElementById('cli-nombre').value = '';
+  document.getElementById('cli-tel').value = '';
+  document.getElementById('cli-dir').value = '';
+  openModal('m-cliente');
+}
+async function saveCliente(){
+  const id = document.getElementById('cli-id').value;
+  const nombre = document.getElementById('cli-nombre').value.trim();
+  if(!nombre){ toast('El nombre es requerido','err'); return; }
+  const data = { nombre, telefono: document.getElementById('cli-tel').value.trim(), direccion: document.getElementById('cli-dir').value.trim() };
+  try{
+    if(id) await api('clientes','PATCH',data,`?id=eq.${id}`);
+    else await api('clientes','POST',{id:uid(),...data});
+    closeModal('m-cliente');
+    toast(id ? 'Cliente actualizado ✓' : 'Cliente guardado ✓','ok');
+    clientes=[]; loadClientes();
+  }catch(e){ toast(e.message,'err'); }
+}
+async function editCliente(id){
+  if(!clientes.length) clientes = await api('clientes','GET',null,'?order=nombre');
+  const c = clientes.find(x=>x.id===id)||(await api('clientes','GET',null,`?id=eq.${id}`))[0];
+  document.getElementById('m-cli-title').textContent = 'Editar Cliente';
+  document.getElementById('cli-id').value = c.id;
+  document.getElementById('cli-nombre').value = c.nombre||'';
+  document.getElementById('cli-tel').value = c.telefono||'';
+  document.getElementById('cli-dir').value = c.direccion||'';
+  openModal('m-cliente');
+}
+async function delCliente(id){
+  if(!confirm('¿Eliminar este cliente?')) return;
+  await api('clientes','DELETE',null,`?id=eq.${id}`);
+  toast('Cliente eliminado'); clientes=[]; loadClientes();
+}
+
+// ===== PRODUCTOS =====
+function openProductoModal(){
+  document.getElementById('m-prod-title').textContent = 'Nuevo Producto';
+  ['prod-id','prod-desc','prod-precio','prod-costo','prod-stock','prod-unidad'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('prod-min').value = '5';
+  openModal('m-producto');
+}
+async function saveProducto(){
+  const id = document.getElementById('prod-id').value;
+  const descripcion = document.getElementById('prod-desc').value.trim();
+  if(!descripcion){ toast('La descripción es requerida','err'); return; }
+  const data = {
+    descripcion,
+    precio_venta: parseFloat(document.getElementById('prod-precio').value)||0,
+    costo: parseFloat(document.getElementById('prod-costo').value)||0,
+    stock: parseFloat(document.getElementById('prod-stock').value)||0,
+    stock_minimo: parseFloat(document.getElementById('prod-min').value)||5,
+    unidad: document.getElementById('prod-unidad').value.trim()||'und'
+  };
+  try{
+    if(id) await api('productos','PATCH',data,`?id=eq.${id}`);
+    else await api('productos','POST',{id:uid(),...data});
+    closeModal('m-producto');
+    toast(id ? 'Producto actualizado ✓' : 'Producto guardado ✓','ok');
+    productos=[]; loadProductos();
+  }catch(e){ toast(e.message,'err'); }
+}
+async function editProducto(id){
+  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
+  const p = productos.find(x=>x.id===id)||(await api('productos','GET',null,`?id=eq.${id}`))[0];
+  document.getElementById('m-prod-title').textContent = 'Editar Producto';
+  document.getElementById('prod-id').value = p.id;
+  document.getElementById('prod-desc').value = p.descripcion||'';
+  document.getElementById('prod-precio').value = p.precio_venta||'';
+  document.getElementById('prod-costo').value = p.costo||'';
+  document.getElementById('prod-stock').value = p.stock||'';
+  document.getElementById('prod-min').value = p.stock_minimo||5;
+  document.getElementById('prod-unidad').value = p.unidad||'';
+  openModal('m-producto');
+}
+async function delProducto(id){
+  if(!confirm('¿Eliminar este producto?')) return;
+  await api('productos','DELETE',null,`?id=eq.${id}`);
+  toast('Producto eliminado'); productos=[]; loadProductos();
+}
+
+// ===== PROVEEDORES =====
+function openProveedorModal(){
+  document.getElementById('m-prov-title').textContent = 'Nuevo Proveedor';
+  ['prov-id','prov-nombre','prov-tel','prov-dir'].forEach(i=>document.getElementById(i).value='');
+  openModal('m-proveedor');
+}
+async function saveProveedor(){
+  const id = document.getElementById('prov-id').value;
+  const nombre = document.getElementById('prov-nombre').value.trim();
+  if(!nombre){ toast('El nombre es requerido','err'); return; }
+  const data = { nombre, telefono: document.getElementById('prov-tel').value.trim(), direccion: document.getElementById('prov-dir').value.trim() };
+  try{
+    if(id) await api('proveedores','PATCH',data,`?id=eq.${id}`);
+    else await api('proveedores','POST',{id:uid(),...data});
+    closeModal('m-proveedor');
+    toast(id ? 'Proveedor actualizado ✓' : 'Proveedor guardado ✓','ok');
+    proveedores=[]; loadProveedores();
+  }catch(e){ toast(e.message,'err'); }
+}
+async function editProveedor(id){
+  if(!proveedores.length) proveedores = await api('proveedores','GET',null,'?order=nombre');
+  const p = proveedores.find(x=>x.id===id)||(await api('proveedores','GET',null,`?id=eq.${id}`))[0];
+  document.getElementById('m-prov-title').textContent = 'Editar Proveedor';
+  document.getElementById('prov-id').value = p.id;
+  document.getElementById('prov-nombre').value = p.nombre||'';
+  document.getElementById('prov-tel').value = p.telefono||'';
+  document.getElementById('prov-dir').value = p.direccion||'';
+  openModal('m-proveedor');
+}
+async function delProveedor(id){
+  if(!confirm('¿Eliminar este proveedor?')) return;
+  await api('proveedores','DELETE',null,`?id=eq.${id}`);
+  toast('Proveedor eliminado'); proveedores=[]; loadProveedores();
+}
+
+// ===== ABONOS =====
+async function openAbonoModal(ventaId){
+  if(!clientes.length) clientes = await api('clientes','GET',null,'?order=nombre');
+  const v = ventas.find(x=>x.id===ventaId)||(await api('ventas','GET',null,`?id=eq.${ventaId}`))[0];
+  if(!v) return;
+  const c = clientes.find(x=>x.id===v.cliente_id);
+  const prevAbonos = await api('abonos','GET',null,`?venta_id=eq.${ventaId}&order=fecha`);
+  const totalAbonado = prevAbonos.reduce((s,a)=>s+(a.monto||0),0);
+  document.getElementById('ab-venta-id').value = ventaId;
+  document.getElementById('ab-monto').value = '';
+  document.getElementById('ab-fecha').value = today();
+  document.getElementById('ab-info').innerHTML = `
+    <strong>${c?.nombre||'—'}</strong> · Factura #${v.numero_factura}<br>
+    Total: <strong>${fmt(v.total_venta||0)}</strong> &nbsp;·&nbsp;
+    Abonado: <strong class="c-green">${fmt(totalAbonado)}</strong> &nbsp;·&nbsp;
+    Saldo: <strong class="c-amber">${fmt(v.saldo_pendiente||0)}</strong>`;
+  document.getElementById('ab-previos').innerHTML = prevAbonos.length
+    ? `<div style="margin-top:10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--mist-dark);">Abonos anteriores</div>
+       ${prevAbonos.map(a=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--mist);">
+         <span>${a.fecha} · ${a.metodo||'—'}</span><span class="fw7 c-green">${fmt(a.monto)}</span>
+       </div>`).join('')}` : '';
+  openModal('m-abono');
+}
+async function saveAbono(){
+  const ventaId = document.getElementById('ab-venta-id').value;
+  const monto = parseFloat(document.getElementById('ab-monto').value)||0;
+  if(!monto||monto<=0){ toast('Ingresa un monto válido','err'); return; }
+  const v = ventas.find(x=>x.id===ventaId)||(await api('ventas','GET',null,`?id=eq.${ventaId}`))[0];
+  if(!v){ toast('Venta no encontrada','err'); return; }
+  const nuevoSaldo = Math.max(0,(v.saldo_pendiente||0)-monto);
+  try{
+    await api('abonos','POST',{id:uid(), venta_id:ventaId, monto, fecha:document.getElementById('ab-fecha').value, metodo:document.getElementById('ab-metodo').value});
+    await api('ventas','PATCH',{saldo_pendiente:nuevoSaldo, estado:nuevoSaldo<=0?'Pagado':'Pendiente'},`?id=eq.${ventaId}`);
+    closeModal('m-abono'); toast('Abono registrado ✓','ok');
+    cacheClearAll(); loadVentas();
+  }catch(e){ toast(e.message,'err'); }
+}
+async function saveEditAbono(){
+  const id = document.getElementById('eab-id').value;
+  const monto = parseFloat(document.getElementById('eab-monto').value)||0;
+  if(!monto){ toast('Monto requerido','err'); return; }
+  try{
+    await api('abonos','PATCH',{monto, fecha:document.getElementById('eab-fecha').value, metodo:document.getElementById('eab-metodo').value},`?id=eq.${id}`);
+    closeModal('m-edit-abono'); toast('Abono actualizado ✓','ok');
+    cacheClearAll(); loadAbonos();
+  }catch(e){ toast(e.message,'err'); }
+}
+
+// ===== VENTAS: eliminar =====
+async function delVenta(id){
+  if(!confirm('¿Eliminar esta venta y sus datos?')) return;
+  try{
+    await api('detalle_ventas','DELETE',null,`?venta_id=eq.${id}`);
+    await api('abonos','DELETE',null,`?venta_id=eq.${id}`);
+    await api('ventas','DELETE',null,`?id=eq.${id}`);
+    toast('Venta eliminada'); cacheClearAll(); loadVentas();
+  }catch(e){ toast(e.message,'err'); }
+}
+
+// ===== COMPRAS: abrir, filas, guardar, editar =====
+async function openCompraModal(){
+  if(!proveedores.length) proveedores = await api('proveedores','GET',null,'?order=nombre');
+  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
+  const sel = document.getElementById('c-prov');
+  sel.innerHTML = '<option value="">Seleccionar proveedor...</option>' +
+    proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+  document.getElementById('c-fecha').value = today();
+  document.getElementById('c-num').value = '';
+  document.getElementById('c-notas').value = '';
+  document.getElementById('compra-rows').innerHTML = '';
+  document.getElementById('t-compra').textContent = '$0';
+  addCompraRow();
+  openModal('m-compra');
+}
+
+function addCompraRow(){
+  const id = uid();
+  const div = document.createElement('div');
+  div.className = 'prod-row'; div.id = id; div.dataset.prodId = '';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 80px 110px 32px;gap:6px;padding:6px 12px;border-bottom:1px solid var(--mist);align-items:center;';
+  div.innerHTML = `
+    <div style="position:relative;">
+      <input type="text" class="psel-txt" placeholder="Buscar producto..." autocomplete="off"
+        style="width:100%;padding:6px 10px;border:1px solid var(--mist-mid);border-radius:6px;font-size:13px;"
+        oninput="filterAC('${id}','compra')" onfocus="openAC('${id}');_acTipo['${id}']='compra';"
+        onblur="setTimeout(()=>closeAC('${id}'),200)">
+      <div class="prod-ac-dropdown" id="ac-${id}"></div>
+    </div>
+    <input type="number" class="pcant" placeholder="Cant." min="0" value="1"
+      style="padding:6px 8px;border:1px solid var(--mist-mid);border-radius:6px;font-size:13px;text-align:right;"
+      oninput="calcCRow('${id}')">
+    <input type="number" class="pprec" placeholder="Costo" min="0"
+      style="padding:6px 8px;border:1px solid var(--mist-mid);border-radius:6px;font-size:13px;text-align:right;"
+      oninput="calcCRow('${id}')">
+    <button onclick="removeRow('${id}')" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:16px;">✕</button>`;
+  document.getElementById('compra-rows').appendChild(div);
+}
+
+function calcCRow(rowId){
+  let total = 0;
+  document.querySelectorAll('#compra-rows .prod-row').forEach(r=>{
+    total += (parseFloat(r.querySelector('.pcant')?.value)||0)*(parseFloat(r.querySelector('.pprec')?.value)||0);
+  });
+  document.getElementById('t-compra').textContent = fmt(total);
+}
+
+async function saveCompra(){
+  const provId = document.getElementById('c-prov').value;
+  if(!provId){ toast('Selecciona un proveedor','err'); return; }
+  const rows = [...document.querySelectorAll('#compra-rows .prod-row')];
+  const detalles = rows.map(r=>({
+    producto_id: r.dataset.prodId||'',
+    cantidad: parseFloat(r.querySelector('.pcant')?.value)||0,
+    costo_unitario: parseFloat(r.querySelector('.pprec')?.value)||0
+  })).filter(d=>d.producto_id && d.cantidad>0);
+  if(!detalles.length){ toast('Agrega al menos un producto','err'); return; }
+  const total = detalles.reduce((s,d)=>s+d.cantidad*d.costo_unitario,0);
+  const compraId = uid();
+  try{
+    await api('compras','POST',{id:compraId, proveedor_id:provId,
+      fecha:document.getElementById('c-fecha').value,
+      numero_pedido:document.getElementById('c-num').value.trim(),
+      notas:document.getElementById('c-notas').value.trim(), total});
+    for(const d of detalles){
+      await api('detalle_compras','POST',{id:uid(), compra_id:compraId, ...d});
+      const prod = productos.find(p=>p.id===d.producto_id);
+      if(prod){ const ns=(prod.stock||0)+d.cantidad; await api('productos','PATCH',{stock:ns},`?id=eq.${d.producto_id}`); prod.stock=ns; }
+    }
+    closeModal('m-compra'); toast('Compra guardada ✓','ok');
+    cacheClearAll(); loadCompras();
+  }catch(e){ toast(e.message,'err'); }
+}
+
+async function editCompra(id){
+  if(!proveedores.length) proveedores = await api('proveedores','GET',null,'?order=nombre');
+  if(!productos.length) productos = await api('productos','GET',null,'?order=descripcion');
+  const c = (await api('compras','GET',null,`?id=eq.${id}`))[0];
+  const dets = await api('detalle_compras','GET',null,`?compra_id=eq.${id}`);
+  const sel = document.getElementById('ec-prov');
+  sel.innerHTML = '<option value="">Seleccionar...</option>' +
+    proveedores.map(p=>`<option value="${p.id}" ${p.id===c.proveedor_id?'selected':''}>${p.nombre}</option>`).join('');
+  document.getElementById('ec-id').value = c.id;
+  document.getElementById('ec-fecha').value = c.fecha||'';
+  document.getElementById('ec-num').value = c.numero_pedido||'';
+  document.getElementById('ec-notas').value = c.notas||'';
+  const container = document.getElementById('ec-rows');
+  container.innerHTML = '';
+  dets.forEach(d=>addEditCompraRow(d));
+  if(!dets.length) addEditCompraRow();
+  calcECRow();
+  openModal('m-edit-compra');
+}
+
+function addEditCompraRow(det=null){
+  const id = uid();
+  const prod = det?.producto_id ? productos.find(p=>p.id===det.producto_id) : null;
+  const div = document.createElement('div');
+  div.className = 'prod-row'; div.id = id; div.dataset.prodId = det?.producto_id||'';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 80px 110px 32px;gap:6px;padding:6px 12px;border-bottom:1px solid var(--mist);align-items:center;';
+  div.innerHTML = `
+    <div style="position:relative;">
+      <input type="text" class="psel-txt" placeholder="Buscar producto..." autocomplete="off"
+        value="${prod?.descripcion||''}"
+        style="width:100%;padding:6px 10px;border:1px solid var(--mist-mid);border-radius:6px;font-size:13px;"
+        oninput="filterAC('${id}','compra')" onfocus="openAC('${id}');_acTipo['${id}']='compra';"
+        onblur="setTimeout(()=>closeAC('${id}'),200)">
+      <div class="prod-ac-dropdown" id="ac-${id}"></div>
+    </div>
+    <input type="number" class="pcant" placeholder="Cant." min="0" value="${det?.cantidad||1}"
+      style="padding:6px 8px;border:1px solid var(--mist-mid);border-radius:6px;font-size:13px;text-align:right;"
+      oninput="calcECRow()">
+    <input type="number" class="pprec" placeholder="Costo" min="0" value="${det?.costo_unitario||''}"
+      style="padding:6px 8px;border:1px solid var(--mist-mid);border-radius:6px;font-size:13px;text-align:right;"
+      oninput="calcECRow()">
+    <button onclick="removeRow('${id}')" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:16px;">✕</button>`;
+  document.getElementById('ec-rows').appendChild(div);
+}
+
+function calcECRow(){
+  let total = 0;
+  document.querySelectorAll('#ec-rows .prod-row').forEach(r=>{
+    total += (parseFloat(r.querySelector('.pcant')?.value)||0)*(parseFloat(r.querySelector('.pprec')?.value)||0);
+  });
+  document.getElementById('t-ec').textContent = fmt(total);
+}
+
+async function saveEditCompra(){
+  const id = document.getElementById('ec-id').value;
+  const provId = document.getElementById('ec-prov').value;
+  if(!provId){ toast('Selecciona un proveedor','err'); return; }
+  const rows = [...document.querySelectorAll('#ec-rows .prod-row')];
+  const detalles = rows.map(r=>({
+    producto_id: r.dataset.prodId||'',
+    cantidad: parseFloat(r.querySelector('.pcant')?.value)||0,
+    costo_unitario: parseFloat(r.querySelector('.pprec')?.value)||0
+  })).filter(d=>d.producto_id && d.cantidad>0);
+  if(!detalles.length){ toast('Agrega al menos un producto','err'); return; }
+  const total = detalles.reduce((s,d)=>s+d.cantidad*d.costo_unitario,0);
+  try{
+    // Revertir stock anterior
+    const oldDets = await api('detalle_compras','GET',null,`?compra_id=eq.${id}`);
+    for(const od of oldDets){
+      const prod = productos.find(p=>p.id===od.producto_id);
+      if(prod){ const ns=Math.max(0,(prod.stock||0)-od.cantidad); await api('productos','PATCH',{stock:ns},`?id=eq.${od.producto_id}`); prod.stock=ns; }
+    }
+    await api('detalle_compras','DELETE',null,`?compra_id=eq.${id}`);
+    await api('compras','PATCH',{proveedor_id:provId,
+      fecha:document.getElementById('ec-fecha').value,
+      numero_pedido:document.getElementById('ec-num').value.trim(),
+      notas:document.getElementById('ec-notas').value.trim(), total},`?id=eq.${id}`);
+    for(const d of detalles){
+      await api('detalle_compras','POST',{id:uid(), compra_id:id, ...d});
+      const prod = productos.find(p=>p.id===d.producto_id);
+      if(prod){ const ns=(prod.stock||0)+d.cantidad; await api('productos','PATCH',{stock:ns},`?id=eq.${d.producto_id}`); prod.stock=ns; }
+    }
+    closeModal('m-edit-compra'); toast('Compra actualizada ✓','ok');
+    cacheClearAll(); loadCompras();
+  }catch(e){ toast(e.message,'err'); }
+}
+
 </script>
+</body>
+</html>
