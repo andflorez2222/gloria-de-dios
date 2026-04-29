@@ -1699,6 +1699,15 @@ tr.drag-over td { background: var(--rose-soft) !important; }
       <div class="totales">
         <div class="tot-row tot-grand"><span>TOTAL COMPRA:</span><span id="t-compra">$0</span></div>
       </div>
+      <!-- APORTES -->
+      <div style="margin:12px 0 0;border-top:1px solid var(--mist);padding-top:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink-soft);">💰 ¿Quién pone?</span>
+          <button class="btn btn-xs btn-ghost" type="button" onclick="addAporteFila()">+ Agregar</button>
+        </div>
+        <div id="aportes-rows"></div>
+        <div id="aportes-resumen" style="font-size:11px;color:var(--mist-dark);margin-top:4px;text-align:right;"></div>
+      </div>
     </div>
     <div class="mf">
       <button class="btn btn-ghost" onclick="closeModal('m-compra')">Cancelar</button>
@@ -2153,6 +2162,32 @@ async function loadDashboard(){
       <span class="fw7 c-amber">${fmt(v.saldo_pendiente)}</span>
     </div>`;
   }).join('') : '<div class="empty"><p>🎉 Sin deudas pendientes</p></div>';
+
+  // Aportes acumulados
+  try{
+    const aportes = await loadAportesCompra();
+    const card = document.getElementById('ds-aportes-card');
+    const el = document.getElementById('ds-aportes-content');
+    if(aportes.length && card && el){
+      card.style.display = '';
+      const byPerson = {};
+      aportes.forEach(a=>{ byPerson[a.nombre]=(byPerson[a.nombre]||0)+(a.monto||0); });
+      const total = Object.values(byPerson).reduce((s,v)=>s+v,0);
+      el.innerHTML = `<div style="display:flex;gap:16px;flex-wrap:wrap;">
+        ${Object.entries(byPerson).map(([nombre,monto])=>`
+          <div style="flex:1;min-width:140px;background:var(--rose-pale);padding:12px 16px;border-radius:10px;border:1px solid var(--rose-soft);">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rose);margin-bottom:4px;">👤 ${nombre}</div>
+            <div style="font-size:20px;font-weight:800;color:var(--rose);">${fmt(monto)}</div>
+            <div style="font-size:11px;color:var(--ink-soft);">${total>0?Math.round(monto/total*100):0}% del total</div>
+          </div>`).join('')}
+        <div style="flex:1;min-width:140px;background:var(--mist);padding:12px 16px;border-radius:10px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px;">📊 Total</div>
+          <div style="font-size:20px;font-weight:800;">${fmt(total)}</div>
+          <div style="font-size:11px;color:var(--ink-soft);">en ${aportes.length} aportes</div>
+        </div>
+      </div>`;
+    }
+  }catch(e){}
 
   // Renderizar tab activo
   if(dashCurrentTab==='usuarios') renderDashUsuarios(allVentas, allAbonos, mes);
@@ -3590,55 +3625,55 @@ async function exportCompraCSV(){
 }
 
 // ===== SELECTOR DE USUARIO =====
-async function showUserSelector(){
-  // Cargar usuarios de Supabase
+// ===== APORTES EN COMPRAS =====
+function addAporteFila(nombre='', monto=''){
+  const container = document.getElementById('aportes-rows');
+  if(!container) return;
+  const row = document.createElement('div');
+  row.className = 'aporte-row';
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 120px 28px;gap:6px;margin-bottom:6px;';
+  row.innerHTML = `
+    <select class="ap-nombre" style="padding:6px 10px;border:1.5px solid var(--mist-mid);border-radius:8px;font-size:13px;">
+      <option value="">— Quién —</option>
+      ${usuariosList.map(u=>`<option value="${u.nombre}" ${u.nombre===nombre?'selected':''}>${u.nombre}</option>`).join('')}
+    </select>
+    <input type="number" class="ap-monto" placeholder="Monto" value="${monto}" min="0"
+      style="padding:6px 10px;border:1.5px solid var(--mist-mid);border-radius:8px;font-size:13px;"
+      oninput="actualizarResumenAportes()">
+    <button type="button" onclick="this.parentElement.remove();actualizarResumenAportes()"
+      style="background:#fee2e2;border:none;border-radius:6px;color:#dc2626;cursor:pointer;font-size:14px;">✕</button>`;
+  container.appendChild(row);
+}
+
+function actualizarResumenAportes(){
+  const rows = document.querySelectorAll('.aporte-row');
+  const total = [...rows].reduce((s,r)=>s+(parseFloat(r.querySelector('.ap-monto')?.value)||0),0);
+  const totalCompra = parseFloat(document.getElementById('t-compra')?.textContent?.replace(/[^0-9]/g,'')||0);
+  const resumen = document.getElementById('aportes-resumen');
+  if(resumen){
+    const diff = totalCompra - total;
+    resumen.textContent = `Total aportado: ${fmt(total)}${diff!==0?' · Faltan: '+fmt(Math.abs(diff)):'  ✅ Cuadra'}`;
+    resumen.style.color = diff===0?'var(--green)':'var(--amber)';
+  }
+}
+
+async function guardarAportes(compraId){
+  const rows = document.querySelectorAll('.aporte-row');
+  for(const r of rows){
+    const nombre = r.querySelector('.ap-nombre')?.value;
+    const monto = parseFloat(r.querySelector('.ap-monto')?.value)||0;
+    if(nombre && monto>0){
+      await api('aportes_compra','POST',{id:uid(), compra_id:compraId, nombre, monto});
+    }
+  }
+}
+
+async function loadAportesCompra(){
+  // KPI de aportes acumulados por persona para el dashboard
   try{
-    usuariosList = await api('usuarios','GET',null,'?order=nombre');
-  }catch(e){ usuariosList=[]; }
-
-  const screen = document.getElementById('user-select-screen');
-  const opts = document.getElementById('us-options');
-  screen.style.display = 'flex';
-
-  if(!usuariosList.length){
-    // Si no hay usuarios en Supabase, crear usuarios por defecto basados en el email
-    opts.innerHTML = `
-      <div style="text-align:center;color:var(--ink-soft);font-size:13px;">
-        <p>No hay usuarios en la tabla <b>usuarios</b>.<br>Insertando usuario de sesión...</p>
-      </div>`;
-    // Usar email como usuario
-    const email = document.getElementById('sb-email').textContent;
-    currentUser = {id: SESSION.user?.id || uid(), nombre: email, emoji:'👤'};
-    setTimeout(()=>{ screen.style.display='none'; startApp(); }, 1500);
-    return;
-  }
-
-  const emojis = ['👩','👨','🧑','👱','🧔'];
-  opts.innerHTML = usuariosList.map((u,i)=>`
-    <button class="us-btn" onclick="selectUser('${u.id}','${u.nombre.replace(/'/g,"\'")}','${emojis[i]||'👤'}')">
-      <div class="us-avatar">${emojis[i]||'👤'}</div>
-      <span>${u.nombre}</span>
-    </button>`).join('');
-}
-
-function selectUser(id, nombre, emoji){
-  currentUser = {id, nombre, emoji};
-  document.getElementById('user-select-screen').style.display = 'none';
-  // Mostrar chip en sidebar
-  const chip = document.getElementById('active-user-chip');
-  if(chip) chip.innerHTML = `<span class="user-chip" title="Cambiar usuario" onclick="showUserSelector()"><span class="uc-dot"></span>${nombre}</span>`;
-  startApp();
-}
-
-function startApp(){
-  document.getElementById('app-screen').style.display = 'block';
-  initApp();
-  // Poblar select de retiro modal
-  const retSel = document.getElementById('ret-usuario');
-  if(retSel && usuariosList.length){
-    retSel.innerHTML = '<option value="">Seleccionar...</option>' +
-      usuariosList.map(u=>`<option value="${u.id}" ${u.id===currentUser?.id?'selected':''}>${u.nombre}</option>`).join('');
-  }
+    const aportes = await api('aportes_compra','GET',null,'?order=created_at.desc');
+    return aportes;
+  }catch(e){ return []; }
 }
 
 // ===== RETIROS =====
@@ -4176,6 +4211,11 @@ async function openCompraModal(){
   document.getElementById('c-fecha').value = today();
   document.getElementById('c-num').value = '';
   document.getElementById('c-notas').value = '';
+  document.getElementById('aportes-rows').innerHTML = '';
+  document.getElementById('aportes-resumen').textContent = '';
+  // Pre-agregar filas por usuario
+  if(!usuariosList.length){ try{ usuariosList = await api('usuarios','GET',null,'?order=nombre'); }catch(e){} }
+  usuariosList.forEach(u=>addAporteFila(u.nombre,''));
   document.getElementById('compra-rows').innerHTML = '';
   document.getElementById('t-compra').textContent = '$0';
   addCompraRow();
@@ -4214,6 +4254,7 @@ function calcCRow(rowId){
 }
 
 async function saveCompra(){
+  let compraId = '';
   const provId = document.getElementById('c-prov').value;
   if(!provId){ toast('Selecciona un proveedor','err'); return; }
   const rows = [...document.querySelectorAll('#compra-rows .prod-row')];
@@ -4235,6 +4276,7 @@ async function saveCompra(){
       const prod = productos.find(p=>p.id===d.producto_id);
       if(prod){ const ns=(prod.stock||0)+d.cantidad; await api('productos','PATCH',{stock:ns},`?id=eq.${d.producto_id}`); prod.stock=ns; }
     }
+    await guardarAportes(compraId);
     closeModal('m-compra'); toast('Compra guardada ✓','ok');
     cacheClearAll(); loadCompras();
   }catch(e){ toast(e.message,'err'); }
